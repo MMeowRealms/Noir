@@ -15,6 +15,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectMap
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap
 import moe.meowrealms.noir.NoirMain
 import moe.meowrealms.noir.network.sync.ModelSynchronizationContext
+import org.apache.commons.lang3.tuple.Pair
 import org.bukkit.entity.Player
 import rip.ysm.security.YsmCrypt
 import java.net.URI
@@ -36,18 +37,53 @@ object ModelManager {
 
     private lateinit var cacheKey: ByteArray
 
-    public val secureRand = SecureRandom()
+    val secureRand = SecureRandom()
 
     private val builtinModels: MutableMap<String, ServerModelManager.ServerPackData> = ConcurrentHashMap()
 
     @Volatile
     private var availableCaches: IntSet = IntOpenHashSet()
     @Volatile
-    private var cacheHash2ModelInfo: Object2ObjectMap<String, ServerModelData> = Object2ObjectOpenHashMap()
+    private var name2ModelData: Object2ObjectMap<String, ServerModelData> = Object2ObjectOpenHashMap()
     @Volatile
     private var authRequiredModels: Set<String> = HashSet()
 
     private var modelSynchronizationContexts: MutableMap<UUID, ModelSynchronizationContext> = ConcurrentHashMap()
+
+    fun validateSelectedModel(modelId: String, texture: String): Boolean {
+        val modelData = this.name2ModelData[modelId] ?: return false
+
+        return modelData.modelInfo.textures.contains(texture)
+    }
+
+    fun getDefaultModelConfig(defaultModelId: String, defaultModelTexture: String): Pair<String, String> {
+        var defaultTexture = defaultModelTexture
+
+        if (defaultTexture.lowercase(Locale.getDefault()).endsWith(".png") && defaultTexture.length > 4) {
+            defaultTexture = defaultTexture.substring(0, defaultTexture.length - 4)
+        }
+
+        if (!this.builtinModels.isEmpty()) {
+            return Pair.of<String, String>(defaultModelId, defaultTexture)
+        } else {
+            val modelData = this.name2ModelData[defaultModelId]
+            if (modelData == null) {
+                return Pair.of<String, String>("default", "default")
+            } else {
+                if (!modelData.modelInfo.textures.contains(defaultTexture)) {
+                    if (modelData.modelInfo.textures
+                            .contains(modelData.loadedModelData.modelProperties.defaultTexture)
+                    ) {
+                        defaultTexture = modelData.loadedModelData.modelProperties.defaultTexture
+                    } else {
+                        defaultTexture = modelData.modelInfo.textures[0] as String
+                    }
+                }
+
+                return Pair.of<String, String>(defaultModelId, defaultTexture)
+            }
+        }
+    }
 
     fun getLoadedModelCount(): Int {
         return this.availableCaches.size + this.builtinModels.size
@@ -74,7 +110,7 @@ object ModelManager {
     }
 
     fun getCachedModels(): Collection<ServerModelData> {
-        return this.cacheHash2ModelInfo.values
+        return this.name2ModelData.values
     }
 
     fun getBuiltinModels(): Collection<ServerModelManager.ServerPackData> {
@@ -254,7 +290,7 @@ object ModelManager {
         }
 
         this.availableCaches = availableCaches
-        this.cacheHash2ModelInfo = Object2ObjectOpenHashMap(modelDefinitions)
+        this.name2ModelData = Object2ObjectOpenHashMap(modelDefinitions)
         this.authRequiredModels = authRequiredModels
     }
 
