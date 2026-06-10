@@ -1,0 +1,8 @@
+name: Noir
+version: '1.0.0-dev'
+main: moe.meowrealms.noir.NoirMain
+api-version: '1.21'
+authors: [ MrHua269, Klop233 ]
+description: The 3rd generation of plugin version of ysm!!!
+
+folia-supported: true
