@@ -230,11 +230,11 @@ object ModelManager {
 
                 this.builtinModels.clear()
 
-                this.loadBuiltinModel(this.builtinModelsFolderPath)
-                this.loadBuiltinModel(this.customModelsFolderPath)
-                this.loadBuiltinModel(this.authModelsFolderPath)
+                this.scanAndCapturePacks(this.builtinModelsFolderPath)
+                this.scanAndCapturePacks(this.customModelsFolderPath)
+                this.scanAndCapturePacks(this.authModelsFolderPath)
 
-                this.scanAndLoacModels(
+                this.scanAndLoadModels(
                     this.builtinModelsFolderPath,
                     this.cacheFolderPath,
                     loadedModels,
@@ -242,7 +242,7 @@ object ModelManager {
                     validCacheFiles,
                     false
                 )
-                this.scanAndLoacModels(
+                this.scanAndLoadModels(
                     this.customModelsFolderPath,
                     this.cacheFolderPath,
                     loadedModels,
@@ -250,7 +250,7 @@ object ModelManager {
                     validCacheFiles,
                     false
                 )
-                this.scanAndLoacModels(
+                this.scanAndLoadModels(
                     this.authModelsFolderPath,
                     this.cacheFolderPath,
                     loadedModels,
@@ -294,15 +294,15 @@ object ModelManager {
         this.authRequiredModels = authRequiredModels
     }
 
-    private fun scanAndLoacModels(
-        modelsDir: Path?,
+    private fun scanAndLoadModels(
+        modelsDir: Path,
         cacheDir: Path,
         loaded: MutableMap<String, ServerModelData>,
         authIds: MutableSet<String>,
         validCaches: MutableSet<String>,
         isAuth: Boolean
     ) {
-        if (modelsDir == null || !Files.isDirectory(modelsDir)) return
+        if (!Files.isDirectory(modelsDir)) return
 
         try {
             Files.walk(modelsDir).use { stream ->
@@ -351,8 +351,8 @@ object ModelManager {
         }
     }
 
-    private fun loadBuiltinModel(baseDir: Path?) {
-        if (baseDir == null || !Files.isDirectory(baseDir)) return
+    private fun scanAndCapturePacks(baseDir: Path) {
+        if (!Files.isDirectory(baseDir)) return
 
         try {
             Files.list(baseDir).use { stream ->
