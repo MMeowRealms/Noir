@@ -39,7 +39,7 @@ object ModelManager {
 
     val secureRand = SecureRandom()
 
-    private val builtinModels: MutableMap<String, ServerModelManager.ServerPackData> = ConcurrentHashMap()
+    private val loadedPacks: MutableMap<String, ServerModelManager.ServerPackData> = ConcurrentHashMap()
 
     @Volatile
     private var availableCaches: IntSet = IntOpenHashSet()
@@ -63,7 +63,7 @@ object ModelManager {
             defaultTexture = defaultTexture.substring(0, defaultTexture.length - 4)
         }
 
-        if (!this.builtinModels.isEmpty()) {
+        if (!this.loadedPacks.isEmpty()) { // TODO: 这里其实借助了builtin模型自带的pack判断的)
             return Pair.of<String, String>(defaultModelId, defaultTexture)
         } else {
             val modelData = this.name2ModelData[defaultModelId]
@@ -86,7 +86,7 @@ object ModelManager {
     }
 
     fun getLoadedModelCount(): Int {
-        return this.availableCaches.size + this.builtinModels.size
+        return this.availableCaches.size + this.loadedPacks.size
     }
 
     fun onModelSynchronizationDone(context: ModelSynchronizationContext) {
@@ -114,7 +114,7 @@ object ModelManager {
     }
 
     fun getBuiltinModels(): Collection<ServerModelManager.ServerPackData> {
-        return this.builtinModels.values
+        return this.loadedPacks.values
     }
 
     fun cacheKey(): ByteArray {
@@ -228,7 +228,7 @@ object ModelManager {
                 val authIds: MutableSet<String> = HashSet()
                 val validCacheFiles: MutableSet<String> = HashSet()
 
-                this.builtinModels.clear()
+                this.loadedPacks.clear()
 
                 this.scanAndCapturePacks(this.builtinModelsFolderPath)
                 this.scanAndCapturePacks(this.customModelsFolderPath)
@@ -395,7 +395,7 @@ object ModelManager {
                                     packData.iconFormat = 2 // 2 = PNG
                                 }
 
-                                this.builtinModels[packData.folderPath] = packData
+                                this.loadedPacks[packData.folderPath] = packData
                             } catch (e: Exception) {
                                 NoirMain.instance.slF4JLogger.error("Failed to load pack metadata: $packJson", e)
                             }
