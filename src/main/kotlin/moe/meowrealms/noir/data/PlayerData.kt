@@ -14,7 +14,22 @@ class PlayerData (
     public var disabled: Boolean = false,
     public var molangVariables: Int2ObjectMap<Object2FloatMap<String>> = Int2ObjectOpenHashMap()
 ){
-    fun validateModelSelection(defaultModelIdFallback: String, defaultTextureFallback: String) {
+    lateinit var owner: Player
+    lateinit var animationData: DispatchServerDrivenProperty
+
+    @Volatile
+    private var dirty: Boolean = false
+
+    fun initSubComponents(owner: Player) {
+        this.owner = owner
+        this.animationData = this.createModelState(this.owner)
+    }
+
+    fun markDirty() {
+        this.dirty = true
+    }
+
+    fun validateAndCorrectModelSelection(defaultModelIdFallback: String, defaultTextureFallback: String) {
         val validateResult = ModelManager.validateSelectedModel(this.selectedModelId, this.selectedModelTexture)
         val defaultModelConfig = ModelManager.getDefaultModelConfig(defaultModelIdFallback, defaultTextureFallback)
 
@@ -28,6 +43,13 @@ class PlayerData (
             this.selectedModelTexture = defaultModelConfig.right
         }
     }
+
+    fun validateModelSelection(): Boolean {
+        val validateResult = ModelManager.validateSelectedModel(this.selectedModelId, this.selectedModelTexture)
+
+        return validateResult.left && validateResult.right
+    }
+
 
     fun createModelState(player: Player): DispatchServerDrivenProperty {
         val instanced = DispatchServerDrivenProperty(player.entityId)

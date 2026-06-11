@@ -61,11 +61,11 @@ class ModelSynchronizationContext(
 
     private fun sendRequestedCaches(requestedHashes: MutableList<LongArray>) {
         Bukkit.getAsyncScheduler().runNow(NoirMain.instance) {
-            try {
-                for (hashes in requestedHashes) {
-                    val hash1 = hashes[0]
-                    val hash2 = hashes[1]
+            for (hashes in requestedHashes) {
+                val hash1 = hashes[0]
+                val hash2 = hashes[1]
 
+                try {
                     val fileName = String.format("%016x%016x", hash1, hash2)
                     val file = ModelManager.getCacheFile(fileName)
 
@@ -102,9 +102,10 @@ class ModelSynchronizationContext(
                             }
                         }
                     }
+                } catch (e: java.lang.Exception) {
+                    NoirMain.instance.slF4JLogger.error("Failed to send model chunks to ${this.player.name}", e)
                 }
-            } catch (e: java.lang.Exception) {
-                NoirMain.instance.slF4JLogger.error("Failed to send model chunks to ${this.player.name}", e)
+
             }
         }
     }
@@ -231,7 +232,7 @@ class ModelSynchronizationContext(
 
                         this.state = 3
 
-                        NoirMain.instance.slF4JLogger.info("Sending requested hashes: $requestedHashes")
+                        NoirMain.instance.slF4JLogger.info("Sending requested hashes: ${requestedHashes.toTypedArray().contentToString()}")
                         this.sendRequestedCaches(requestedHashes)
                         return
                     }

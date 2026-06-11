@@ -5,28 +5,25 @@ import moe.meowrealms.noir.network.packet.Packet
 import moe.meowrealms.noir.network.packet.PacketHandler
 import moe.meowrealms.noir.utils.SimpleFriendlyByteBuf
 
-class C2SAnimationRequestPacket(
-    var animationIndex: Int,
-    var category: String,
-    var entityId: Int
+class C2SModelSwitchRequestPacket(
+    var modelId: String,
+    var textureId: String
 ) : Packet{
     override fun direction(): EnumDirection {
         return EnumDirection.C_T_S
     }
 
     override fun handle(handler: PacketHandler) {
-        handler.handleAnimationRequest(this)
+        handler.handleModelSwitchRequest(this)
     }
 
     override fun read(buffer: SimpleFriendlyByteBuf) {
-        this.animationIndex = buffer.readVarInt()
-        this.category = buffer.readUtf()
-        this.entityId = buffer.readVarInt()
+        this.modelId = buffer.readUtf()
+        this.textureId = buffer.readUtf()
     }
 
     override fun write(buffer: SimpleFriendlyByteBuf) {
-        buffer.writeVarInt(this.animationIndex)
-        buffer.writeUtf(this.category)
-        buffer.writeVarInt(this.entityId)
+        buffer.writeUtf(this.modelId)
+        buffer.writeUtf(this.textureId)
     }
 }

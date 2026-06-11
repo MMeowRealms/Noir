@@ -1,11 +1,17 @@
 package moe.meowrealms.noir.network
 
 import moe.meowrealms.noir.NoirMain
+import moe.meowrealms.noir.data.PlayerDataStorage.getNoirData
 import moe.meowrealms.noir.model.ModelManager
+import moe.meowrealms.noir.network.ClientConnectionManager.getYsmConnection
 import moe.meowrealms.noir.network.packet.Packet
 import moe.meowrealms.noir.network.packet.PacketHandler
+import moe.meowrealms.noir.network.packet.c2s.C2SAnimationRequestPacket
 import moe.meowrealms.noir.network.packet.c2s.C2SHandshakeConfirmedPacket
 import moe.meowrealms.noir.network.packet.c2s.C2SModelDataPayload
+import moe.meowrealms.noir.network.packet.c2s.C2SModelSwitchRequestPacket
+import moe.meowrealms.noir.network.packet.s2c.S2CEntityModelAnimationDataPacket
+import moe.meowrealms.noir.network.packet.s2c.S2CEntityModelSelectionDataPacket
 import moe.meowrealms.noir.network.packet.s2c.S2CHandshakeRequestPacket
 import moe.meowrealms.noir.network.sync.ModelSynchronizationContext
 import org.bukkit.entity.Player
@@ -25,6 +31,46 @@ class ClientConnection (
 
     fun onDisconnected() {
         this.synchronizationContext.cleanup()
+    }
+
+    fun syncModelSelectionDataTo(player: Player) {
+        val playerData = this.player.getNoirData() ?: return
+
+        player.getYsmConnection().send(S2CEntityModelSelectionDataPacket(
+            this.player.entityId,
+            playerData.selectedModelId,
+            playerData.selectedModelTexture,
+            playerData.disabled,
+            playerData.animationData
+        ))
+    }
+
+    fun syncModelAnimationDataTo(player: Player) {
+        val playerData = this.player.getNoirData() ?: return
+
+        player.getYsmConnection().send(S2CEntityModelAnimationDataPacket(
+            playerData.animationData
+        ))
+    }
+
+    fun syncModelFullData() {
+        this.syncModelSelectionDataTo(this.player)
+        this.syncModelAnimationDataTo(this.player)
+
+        // TODO - Broadcast
+    }
+
+    fun syncModelAnimationData() {
+        this.syncModelAnimationDataTo(this.player)
+
+        // TODO - Broadcast
+    }
+
+    fun handleHandshakeCallback() {
+        this.synchronizationContext.begin()
+
+        // sync to ourselves
+        this.syncModelSelectionDataTo(this.player)
     }
 
     override fun receivingDirection(): EnumDirection {
@@ -48,6 +94,55 @@ class ClientConnection (
 
         NoirMain.instance.slF4JLogger.info("Received handshake confirmed packet from player ${this.player.name}. Begin model synchronization")
 
-        this.synchronizationContext.begin()
+        this.handleHandshakeCallback()
+    }
+
+    override fun handleModelSwitchRequest(packet: C2SModelSwitchRequestPacket) {
+        val validate = ModelManager.validateSelectedModel(packet.modelId, packet.textureId)
+
+        if (!validate.left || !validate.right) {
+            NoirMain.instance.slF4JLogger.warn("Player ${this.player.name} is trying switching to an unknown model ${packet.modelId} with texture ${packet.textureId}!")
+            return
+        }
+
+        val playerData = this.player.getNoirData() ?: return
+
+        playerData.selectedModelId = packet.modelId
+        playerData.selectedModelTexture = packet.textureId
+
+        playerData.markDirty()
+
+        this.syncModelFullData()
+    }
+
+    override fun handleAnimationRequest(packet: C2SAnimationRequestPacket) {
+        val playerData = this.player.getNoirData() ?: return
+
+        if (packet.entityId != -1) {
+            // TODO - This is for TLS, not ours to process
+            return
+        }
+
+        if (packet.animationIndex == -1) {
+            playerData.animationData.extraAnimation("")
+
+            this.syncModelAnimationData()
+            return
+        }
+
+        val selectionValidated = playerData.validateModelSelection()
+        if (!selectionValidated) {
+            NoirMain.instance.slF4JLogger.warn("Player ${this.player.name} is trying playing animations with an invalid model selection ${playerData.selectedModelId} - ${playerData.selectedModelTexture}!")
+            return
+        }
+
+        val animationLookup = ModelManager.lookupAnimationFromPacket(playerData.selectedModelId, packet.animationIndex, packet.category)
+        if (animationLookup == null) {
+            NoirMain.instance.slF4JLogger.warn("Player ${this.player.name} is trying playing an invalid animation ${packet.category} - ${packet.animationIndex}!")
+            return
+        }
+
+        playerData.animationData.extraAnimation(animationLookup)
+        this.syncModelAnimationData()
     }
 }

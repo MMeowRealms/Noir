@@ -1,11 +1,14 @@
 package moe.meowrealms.noir
 
+import moe.meowrealms.noir.data.PlayerDataStorage
 import moe.meowrealms.noir.model.ModelManager
 import moe.meowrealms.noir.network.packet.PacketRegistry
 import moe.meowrealms.noir.network.ClientConnectionManager
 import moe.meowrealms.noir.network.data.DispatchServerDrivenProperty
+import moe.meowrealms.noir.network.packet.c2s.C2SAnimationRequestPacket
 import moe.meowrealms.noir.network.packet.c2s.C2SHandshakeConfirmedPacket
 import moe.meowrealms.noir.network.packet.c2s.C2SModelDataPayload
+import moe.meowrealms.noir.network.packet.c2s.C2SModelSwitchRequestPacket
 import moe.meowrealms.noir.network.packet.s2c.S2CEntityModelAnimationDataPacket
 import moe.meowrealms.noir.network.packet.s2c.S2CEntityModelSelectionDataPacket
 import moe.meowrealms.noir.network.packet.s2c.S2CHandshakeRequestPacket
@@ -43,6 +46,8 @@ class NoirMain : JavaPlugin() {
         }
 
         packetRegistry.register(3, S2CMolangExecutePacket::class) { S2CMolangExecutePacket(IntArray(0), "") }
+        packetRegistry.register(5, C2SModelSwitchRequestPacket::class) { C2SModelSwitchRequestPacket("", "") }
+        packetRegistry.register(7, C2SAnimationRequestPacket::class) { C2SAnimationRequestPacket(0, "", 0) }
     }
 
     fun initNetworking() {
@@ -70,11 +75,18 @@ class NoirMain : JavaPlugin() {
         this.slF4JLogger.info("All models has been loaded! Currently has ${ModelManager.getLoadedModelCount()} models loaded.")
     }
 
+    fun initDataStorage() {
+        PlayerDataStorage.init()
+
+        this.slF4JLogger.info("Data storage initialized.")
+    }
+
     override fun onEnable() {
         instance = this
 
         this.initNetworking()
         this.initAndLoadModels()
+        this.initDataStorage()
     }
 
     override fun onDisable() {

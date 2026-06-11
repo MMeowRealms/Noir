@@ -7,7 +7,9 @@ import com.elfmcys.yesstevemodel.resource.YSMBinaryDeserializer
 import com.elfmcys.yesstevemodel.resource.YSMBinarySerializer
 import com.elfmcys.yesstevemodel.resource.YSMClientMapper
 import com.elfmcys.yesstevemodel.resource.YSMFolderDeserializer
+import com.elfmcys.yesstevemodel.resource.models.ModelProperties
 import com.elfmcys.yesstevemodel.resource.pojo.RawYsmModel
+import com.elfmcys.yesstevemodel.util.data.OrderedStringMap
 import com.google.gson.JsonParser
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet
 import it.unimi.dsi.fastutil.ints.IntSet
@@ -15,6 +17,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectMap
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap
 import moe.meowrealms.noir.NoirMain
 import moe.meowrealms.noir.network.sync.ModelSynchronizationContext
+import org.apache.commons.lang3.StringUtils
 import org.apache.commons.lang3.tuple.Pair
 import org.bukkit.entity.Player
 import rip.ysm.security.YsmCrypt
@@ -49,6 +52,33 @@ object ModelManager {
     private var authRequiredModels: Set<String> = HashSet()
 
     private var modelSynchronizationContexts: MutableMap<UUID, ModelSynchronizationContext> = ConcurrentHashMap()
+
+    fun lookupAnimationFromPacket(modelId: String, index: Int, category: String): String? {
+        val modelData = this.name2ModelData[modelId] ?: return null
+
+        val modelProperties: ModelProperties = modelData.loadedModelData.modelProperties
+        val extraAnimationClassify = modelProperties.extraAnimationClassify
+        var extraAnimations: OrderedStringMap<String, String>
+
+        if (StringUtils.isNotBlank(category)) {
+            val tryFetch = extraAnimationClassify[category]
+
+            if (tryFetch != null) {
+                extraAnimations = tryFetch
+            } else {
+                extraAnimations = modelProperties.extraAnimation
+            }
+
+        } else {
+            extraAnimations = modelProperties.extraAnimation
+        }
+
+        if (extraAnimations.size > index) {
+           return extraAnimations.getKeyAt(index)
+        }
+
+        return null
+    }
 
     fun defaultTextureOf(model: String): String? {
         val modelData = this.name2ModelData[model] ?: return null
@@ -230,9 +260,9 @@ object ModelManager {
     fun loadModels(): Boolean {
         synchronized(this) {
             try {
-                val loadedModels: MutableMap<String, ServerModelData> = HashMap()
-                val authIds: MutableSet<String> = HashSet()
-                val validCacheFiles: MutableSet<String> = HashSet()
+                val loadedModels: MutableMap<String, ServerModelData> = ConcurrentHashMap()
+                val authIds: MutableSet<String> = ConcurrentHashMap.newKeySet()
+                val validCacheFiles: MutableSet<String> = ConcurrentHashMap.newKeySet()
 
                 this.loadedPacks.clear()
 
