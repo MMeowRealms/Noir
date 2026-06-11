@@ -3,25 +3,46 @@ package moe.meowrealms.noir
 import moe.meowrealms.noir.model.ModelManager
 import moe.meowrealms.noir.network.packet.PacketRegistry
 import moe.meowrealms.noir.network.ClientConnectionManager
+import moe.meowrealms.noir.network.data.DispatchServerDrivenProperty
 import moe.meowrealms.noir.network.packet.c2s.C2SHandshakeConfirmedPacket
 import moe.meowrealms.noir.network.packet.c2s.C2SModelDataPayload
+import moe.meowrealms.noir.network.packet.s2c.S2CEntityModelAnimationDataPacket
+import moe.meowrealms.noir.network.packet.s2c.S2CEntityModelSelectionDataPacket
 import moe.meowrealms.noir.network.packet.s2c.S2CHandshakeRequestPacket
 import moe.meowrealms.noir.network.packet.s2c.S2CModelDataPayloadPacket
+import moe.meowrealms.noir.network.packet.s2c.S2CMolangExecutePacket
 import org.bukkit.plugin.java.JavaPlugin
 
 class NoirMain : JavaPlugin() {
 
     companion object {
-        public lateinit var instance: NoirMain
-        public lateinit var packetRegistry: PacketRegistry
+        lateinit var instance: NoirMain
+        lateinit var packetRegistry: PacketRegistry
     }
 
     fun registerPackets() {
-        packetRegistry.register(51, S2CHandshakeRequestPacket::class, {S2CHandshakeRequestPacket()})
-        packetRegistry.register(52, C2SHandshakeConfirmedPacket::class, { C2SHandshakeConfirmedPacket()})
+        packetRegistry.register(51, S2CHandshakeRequestPacket::class) { S2CHandshakeRequestPacket() }
+        packetRegistry.register(52, C2SHandshakeConfirmedPacket::class) { C2SHandshakeConfirmedPacket() }
 
-        packetRegistry.register(1, S2CModelDataPayloadPacket::class, { S2CModelDataPayloadPacket(ByteArray(0)) })
-        packetRegistry.register(2, C2SModelDataPayload::class, { C2SModelDataPayload(ByteArray(0)) })
+        packetRegistry.register(1, S2CModelDataPayloadPacket::class) { S2CModelDataPayloadPacket(ByteArray(0)) }
+        packetRegistry.register(2, C2SModelDataPayload::class) { C2SModelDataPayload(ByteArray(0)) }
+
+        packetRegistry.register(4, S2CEntityModelSelectionDataPacket::class) {
+            S2CEntityModelSelectionDataPacket(
+                0,
+                "",
+                "",
+                false,
+                DispatchServerDrivenProperty(0)
+            )
+        }
+        packetRegistry.register(21, S2CEntityModelAnimationDataPacket::class) {
+            S2CEntityModelAnimationDataPacket(
+                DispatchServerDrivenProperty(0)
+            )
+        }
+
+        packetRegistry.register(3, S2CMolangExecutePacket::class) { S2CMolangExecutePacket(IntArray(0), "") }
     }
 
     fun initNetworking() {

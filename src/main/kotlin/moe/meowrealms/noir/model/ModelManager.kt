@@ -50,10 +50,16 @@ object ModelManager {
 
     private var modelSynchronizationContexts: MutableMap<UUID, ModelSynchronizationContext> = ConcurrentHashMap()
 
-    fun validateSelectedModel(modelId: String, texture: String): Boolean {
-        val modelData = this.name2ModelData[modelId] ?: return false
+    fun defaultTextureOf(model: String): String? {
+        val modelData = this.name2ModelData[model] ?: return null
 
-        return modelData.modelInfo.textures.contains(texture)
+        return modelData.modelInfo.textures.firstOrNull()
+    }
+
+    fun validateSelectedModel(modelId: String, texture: String): Pair<Boolean, Boolean> {
+        val modelData = this.name2ModelData[modelId] ?: return Pair.of(false, false)
+
+        return Pair.of(true, modelData.modelInfo.textures.contains(texture))
     }
 
     fun getDefaultModelConfig(defaultModelId: String, defaultModelTexture: String): Pair<String, String> {

@@ -182,7 +182,7 @@ class DispatchServerDrivenProperty(var entityId: Int) {
         }
 
         @JvmStatic
-        fun decode(buf: SimpleFriendlyByteBuf) {
+        fun decode(buf: SimpleFriendlyByteBuf): DispatchServerDrivenProperty {
             val entityId = buf.readVarInt()
             val variant = buf.readShort()
             val msg = DispatchServerDrivenProperty(entityId)
