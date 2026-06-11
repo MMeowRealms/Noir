@@ -14,6 +14,7 @@ import moe.meowrealms.noir.network.packet.s2c.S2CEntityModelAnimationDataPacket
 import moe.meowrealms.noir.network.packet.s2c.S2CEntityModelSelectionDataPacket
 import moe.meowrealms.noir.network.packet.s2c.S2CHandshakeRequestPacket
 import moe.meowrealms.noir.network.sync.ModelSynchronizationContext
+import moe.meowrealms.noir.tracker.EntityTracker
 import org.bukkit.entity.Player
 
 class ClientConnection (
@@ -53,17 +54,33 @@ class ClientConnection (
         ))
     }
 
-    fun syncModelFullData() {
-        this.syncModelSelectionDataTo(this.player)
-        this.syncModelAnimationDataTo(this.player)
+    fun syncModelFullDataTo(player: Player) {
+        this.syncModelSelectionDataTo(player)
+        this.syncModelAnimationDataTo(player)
+    }
 
-        // TODO - Broadcast
+    fun syncModelFullData() {
+        this.syncModelFullDataTo(this.player)
+
+        for (visible in EntityTracker.getVisible(this.player)) {
+            this.syncModelFullDataTo(visible)
+        }
+    }
+
+    fun syncModelSelectionData() {
+        this.syncModelSelectionDataTo(this.player)
+
+        for (visible in EntityTracker.getVisible(this.player)) {
+            this.syncModelSelectionDataTo(visible)
+        }
     }
 
     fun syncModelAnimationData() {
         this.syncModelAnimationDataTo(this.player)
 
-        // TODO - Broadcast
+        for (visible in EntityTracker.getVisible(this.player)) {
+            this.syncModelAnimationDataTo(visible)
+        }
     }
 
     fun handleHandshakeCallback() {
@@ -112,7 +129,7 @@ class ClientConnection (
 
         playerData.markDirty()
 
-        this.syncModelFullData()
+        this.syncModelSelectionData()
     }
 
     override fun handleAnimationRequest(packet: C2SAnimationRequestPacket) {

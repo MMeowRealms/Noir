@@ -14,6 +14,7 @@ import moe.meowrealms.noir.network.packet.s2c.S2CEntityModelSelectionDataPacket
 import moe.meowrealms.noir.network.packet.s2c.S2CHandshakeRequestPacket
 import moe.meowrealms.noir.network.packet.s2c.S2CModelDataPayloadPacket
 import moe.meowrealms.noir.network.packet.s2c.S2CMolangExecutePacket
+import moe.meowrealms.noir.tracker.EntityTracker
 import org.bukkit.plugin.java.JavaPlugin
 
 class NoirMain : JavaPlugin() {
@@ -81,12 +82,19 @@ class NoirMain : JavaPlugin() {
         this.slF4JLogger.info("Data storage initialized.")
     }
 
+    fun initEntityTracker() {
+        EntityTracker.init()
+
+        this.slF4JLogger.info("Entity tracker initialized.")
+    }
+
     override fun onEnable() {
         instance = this
 
         this.initNetworking()
         this.initAndLoadModels()
         this.initDataStorage()
+        this.initEntityTracker()
     }
 
     override fun onDisable() {

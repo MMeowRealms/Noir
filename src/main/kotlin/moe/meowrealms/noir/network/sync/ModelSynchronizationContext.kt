@@ -33,6 +33,12 @@ class ModelSynchronizationContext(
         this.allowedModels = HashSet(ModelManager.getCachedModels())
     }
 
+    fun restart() {
+        this.state = 1
+
+        this.begin()
+    }
+
     fun begin() {
         this.state = 1
 
