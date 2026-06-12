@@ -130,8 +130,6 @@ object ModelManager {
     }
 
     fun onModelSynchronizationDone(context: ModelSynchronizationContext) {
-        NoirMain.instance.slF4JLogger.info("Model synchronization finished for player $context.player")
-
         this.modelSynchronizationContexts.remove(context.player.uniqueId)
     }
 

@@ -45,7 +45,7 @@ object ClientConnectionManager : Listener, PluginMessageListener {
 
         // push back to main thread
         // so that we could manage the states of a single connection safely and easily
-        player.scheduler.execute(NoirMain.instance, {
+        NoirMain.instance.morePaperLib.scheduling().entitySpecificScheduler(player).run(Runnable {
             val messageAsBuffer = SimpleFriendlyByteBuf(Unpooled.wrappedBuffer(message))
 
             try {
@@ -53,7 +53,7 @@ object ClientConnectionManager : Listener, PluginMessageListener {
             }finally {
                 ReferenceCountUtil.safeRelease(messageAsBuffer)
             }
-        }, null, 1L)
+        }, null)
     }
 
     @EventHandler

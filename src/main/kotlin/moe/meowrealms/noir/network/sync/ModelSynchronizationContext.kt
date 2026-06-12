@@ -66,7 +66,7 @@ class ModelSynchronizationContext(
     }
 
     private fun sendRequestedCaches(requestedHashes: MutableList<LongArray>) {
-        Bukkit.getAsyncScheduler().runNow(NoirMain.instance) {
+        NoirMain.instance.morePaperLib.scheduling().asyncScheduler().run(Runnable {
             for (hashes in requestedHashes) {
                 val hash1 = hashes[0]
                 val hash2 = hashes[1]
@@ -113,7 +113,7 @@ class ModelSynchronizationContext(
                 }
 
             }
-        }
+        })
     }
 
     private fun sendCacheList() {

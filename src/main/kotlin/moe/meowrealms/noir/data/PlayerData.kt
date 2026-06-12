@@ -1,11 +1,14 @@
 package moe.meowrealms.noir.data
 
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 import com.google.gson.annotations.SerializedName
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
 import it.unimi.dsi.fastutil.objects.Object2FloatMap
 import moe.meowrealms.noir.model.ModelManager
 import moe.meowrealms.noir.network.data.DispatchServerDrivenProperty
+import moe.meowrealms.noir.utils.FastutilMapAdapterFactory
 import org.bukkit.entity.Player
 
 class PlayerData (
@@ -22,10 +25,21 @@ class PlayerData (
     @SerializedName("stared_models")
     public var staredModels: MutableSet<String> = HashSet()
 ){
+    @Transient
     lateinit var owner: Player
+    @Transient
     lateinit var animationData: DispatchServerDrivenProperty
 
+    companion object {
+        val GSON: Gson = GsonBuilder()
+            .setPrettyPrinting()
+            .disableHtmlEscaping()
+            .registerTypeAdapterFactory(FastutilMapAdapterFactory())
+            .create()
+    }
+
     @Volatile
+    @Transient
     private var dirty: Boolean = false
 
     fun initSubComponents(owner: Player) {

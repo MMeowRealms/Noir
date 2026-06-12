@@ -2,26 +2,18 @@ package moe.meowrealms.noir
 
 import moe.meowrealms.noir.data.PlayerDataStorage
 import moe.meowrealms.noir.model.ModelManager
-import moe.meowrealms.noir.network.packet.PacketRegistry
 import moe.meowrealms.noir.network.ClientConnectionManager
 import moe.meowrealms.noir.network.data.DispatchServerDrivenProperty
-import moe.meowrealms.noir.network.packet.c2s.C2SAnimationRequestPacket
-import moe.meowrealms.noir.network.packet.c2s.C2SHandshakeConfirmedPacket
-import moe.meowrealms.noir.network.packet.c2s.C2SModelDataPayload
-import moe.meowrealms.noir.network.packet.c2s.C2SModelSwitchRequestPacket
-import moe.meowrealms.noir.network.packet.c2s.C2SMolangExecuteRequestPacket
-import moe.meowrealms.noir.network.packet.c2s.C2SStarModelPacket
-import moe.meowrealms.noir.network.packet.s2c.S2CAuthModelListPacket
-import moe.meowrealms.noir.network.packet.s2c.S2CEntityModelAnimationDataPacket
-import moe.meowrealms.noir.network.packet.s2c.S2CEntityModelSelectionDataPacket
-import moe.meowrealms.noir.network.packet.s2c.S2CHandshakeRequestPacket
-import moe.meowrealms.noir.network.packet.s2c.S2CModelDataPayloadPacket
-import moe.meowrealms.noir.network.packet.s2c.S2CMolangExecutePacket
-import moe.meowrealms.noir.network.packet.s2c.S2CStarModelListPacket
+import moe.meowrealms.noir.network.packet.PacketRegistry
+import moe.meowrealms.noir.network.packet.c2s.*
+import moe.meowrealms.noir.network.packet.s2c.*
 import moe.meowrealms.noir.tracker.EntityTracker
 import org.bukkit.plugin.java.JavaPlugin
+import space.arim.morepaperlib.MorePaperLib
+
 
 class NoirMain : JavaPlugin() {
+    val morePaperLib: MorePaperLib = MorePaperLib(this)
 
     companion object {
         lateinit var instance: NoirMain
@@ -85,6 +77,8 @@ class NoirMain : JavaPlugin() {
     }
 
     fun initDataStorage() {
+        PlayerDataStorage.setWorkingDir(this.dataPath)
+
         PlayerDataStorage.init()
 
         this.slF4JLogger.info("Data storage initialized.")

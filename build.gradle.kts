@@ -12,11 +12,16 @@ repositories {
     maven("https://repo.papermc.io/repository/maven-public/") {
         name = "papermc-repo"
     }
+    maven("https://mvn-repo.arim.space/lesser-gpl3/") {
+        name = "arim-mvn-lgpl3"
+    }
 }
 
 dependencies {
     compileOnly("io.papermc.paper:paper-api:1.21-R0.1-SNAPSHOT")
     compileOnly("io.netty:netty-all:4.1.108.Final")
+
+    implementation("space.arim.morepaperlib:morepaperlib:0.4.3")
 
     implementation(fileTree("libs"))
 
