@@ -53,6 +53,10 @@ object ModelManager {
 
     private var modelSynchronizationContexts: MutableMap<UUID, ModelSynchronizationContext> = ConcurrentHashMap()
 
+    fun getAuthRequiredModels(): Set<String> {
+        return this.authRequiredModels
+    }
+
     fun lookupAnimationFromPacket(modelId: String, index: Int, category: String): String? {
         val modelData = this.name2ModelData[modelId] ?: return null
 

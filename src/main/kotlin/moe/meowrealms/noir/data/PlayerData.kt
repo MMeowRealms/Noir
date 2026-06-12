@@ -1,5 +1,6 @@
 package moe.meowrealms.noir.data
 
+import com.google.gson.annotations.SerializedName
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
 import it.unimi.dsi.fastutil.objects.Object2FloatMap
@@ -8,11 +9,18 @@ import moe.meowrealms.noir.network.data.DispatchServerDrivenProperty
 import org.bukkit.entity.Player
 
 class PlayerData (
+    @SerializedName("selected_model_id")
     public var selectedModelId: String = ModelManager.getDefaultModelConfig("default", "default").left,
+    @SerializedName("selected_model_texture")
     public var selectedModelTexture: String = ModelManager.getDefaultModelConfig("default", "default").right,
+    @SerializedName("mandatory")
     public var mandatory: Boolean = false,
+    @SerializedName("disabled")
     public var disabled: Boolean = false,
-    public var molangVariables: Int2ObjectMap<Object2FloatMap<String>> = Int2ObjectOpenHashMap()
+    @SerializedName("molang_datastorage")
+    public var molangVariables: Int2ObjectMap<Object2FloatMap<String>> = Int2ObjectOpenHashMap(),
+    @SerializedName("stared_models")
+    public var staredModels: MutableSet<String> = HashSet()
 ){
     lateinit var owner: Player
     lateinit var animationData: DispatchServerDrivenProperty

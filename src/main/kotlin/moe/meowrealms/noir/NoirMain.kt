@@ -9,11 +9,15 @@ import moe.meowrealms.noir.network.packet.c2s.C2SAnimationRequestPacket
 import moe.meowrealms.noir.network.packet.c2s.C2SHandshakeConfirmedPacket
 import moe.meowrealms.noir.network.packet.c2s.C2SModelDataPayload
 import moe.meowrealms.noir.network.packet.c2s.C2SModelSwitchRequestPacket
+import moe.meowrealms.noir.network.packet.c2s.C2SMolangExecuteRequestPacket
+import moe.meowrealms.noir.network.packet.c2s.C2SStarModelPacket
+import moe.meowrealms.noir.network.packet.s2c.S2CAuthModelListPacket
 import moe.meowrealms.noir.network.packet.s2c.S2CEntityModelAnimationDataPacket
 import moe.meowrealms.noir.network.packet.s2c.S2CEntityModelSelectionDataPacket
 import moe.meowrealms.noir.network.packet.s2c.S2CHandshakeRequestPacket
 import moe.meowrealms.noir.network.packet.s2c.S2CModelDataPayloadPacket
 import moe.meowrealms.noir.network.packet.s2c.S2CMolangExecutePacket
+import moe.meowrealms.noir.network.packet.s2c.S2CStarModelListPacket
 import moe.meowrealms.noir.tracker.EntityTracker
 import org.bukkit.plugin.java.JavaPlugin
 
@@ -49,6 +53,10 @@ class NoirMain : JavaPlugin() {
         packetRegistry.register(3, S2CMolangExecutePacket::class) { S2CMolangExecutePacket(IntArray(0), "") }
         packetRegistry.register(5, C2SModelSwitchRequestPacket::class) { C2SModelSwitchRequestPacket("", "") }
         packetRegistry.register(7, C2SAnimationRequestPacket::class) { C2SAnimationRequestPacket(0, "", 0) }
+        packetRegistry.register(6, S2CAuthModelListPacket::class) { S2CAuthModelListPacket(HashSet()) }
+        packetRegistry.register(8, S2CStarModelListPacket::class) { S2CStarModelListPacket(HashSet()) }
+        packetRegistry.register(9, C2SStarModelPacket::class) { C2SStarModelPacket("", true) }
+        packetRegistry.register(17, C2SMolangExecuteRequestPacket::class) { C2SMolangExecuteRequestPacket("", 0) }
     }
 
     fun initNetworking() {

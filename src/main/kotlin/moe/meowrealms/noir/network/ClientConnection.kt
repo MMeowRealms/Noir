@@ -10,9 +10,14 @@ import moe.meowrealms.noir.network.packet.c2s.C2SAnimationRequestPacket
 import moe.meowrealms.noir.network.packet.c2s.C2SHandshakeConfirmedPacket
 import moe.meowrealms.noir.network.packet.c2s.C2SModelDataPayload
 import moe.meowrealms.noir.network.packet.c2s.C2SModelSwitchRequestPacket
+import moe.meowrealms.noir.network.packet.c2s.C2SMolangExecuteRequestPacket
+import moe.meowrealms.noir.network.packet.c2s.C2SStarModelPacket
+import moe.meowrealms.noir.network.packet.s2c.S2CAuthModelListPacket
 import moe.meowrealms.noir.network.packet.s2c.S2CEntityModelAnimationDataPacket
 import moe.meowrealms.noir.network.packet.s2c.S2CEntityModelSelectionDataPacket
 import moe.meowrealms.noir.network.packet.s2c.S2CHandshakeRequestPacket
+import moe.meowrealms.noir.network.packet.s2c.S2CMolangExecutePacket
+import moe.meowrealms.noir.network.packet.s2c.S2CStarModelListPacket
 import moe.meowrealms.noir.network.sync.ModelSynchronizationContext
 import moe.meowrealms.noir.tracker.EntityTracker
 import org.bukkit.entity.Player
@@ -32,6 +37,13 @@ class ClientConnection (
 
     fun onDisconnected() {
         this.synchronizationContext.cleanup()
+    }
+
+    fun syncModelSubscribes() {
+        val playerData = this.player.getNoirData() ?: return
+
+        this.send(S2CAuthModelListPacket(ModelManager.getAuthRequiredModels()))
+        this.send(S2CStarModelListPacket(playerData.staredModels))
     }
 
     fun syncModelSelectionDataTo(player: Player) {
@@ -88,6 +100,21 @@ class ClientConnection (
 
         // sync to ourselves
         this.syncModelSelectionDataTo(this.player)
+
+        // model subscribes
+        this.syncModelSubscribes()
+    }
+
+    fun broadcastMolangExecute(expression: String) {
+        val toSend = S2CMolangExecutePacket(intArrayOf(this.player.entityId), expression)
+
+        // ourself
+        this.send(toSend)
+
+        // others
+        for (target in EntityTracker.getVisible(this.player)) {
+            target.getYsmConnection().send(toSend)
+        }
     }
 
     override fun receivingDirection(): EnumDirection {
@@ -136,7 +163,7 @@ class ClientConnection (
         val playerData = this.player.getNoirData() ?: return
 
         if (packet.entityId != -1) {
-            // TODO - This is for TLS, not ours to process
+            // TODO - This is for TLM, not ours to process
             return
         }
 
@@ -161,5 +188,27 @@ class ClientConnection (
 
         playerData.animationData.extraAnimation(animationLookup)
         this.syncModelAnimationData()
+    }
+
+    override fun handleStarModel(packet: C2SStarModelPacket) {
+        val playerData = this.player.getNoirData() ?: return
+
+        if (packet.add) {
+            playerData.staredModels.add(packet.modelId)
+        } else {
+            playerData.staredModels.remove(packet.modelId)
+        }
+
+        playerData.markDirty()
+    }
+
+    override fun handleMolangExecuteRequest(packet: C2SMolangExecuteRequestPacket) {
+        // uhm 好吧我也不知道ysm在数据包里留个这个是干啥的,按理来说sender都能获取到应该也用不着这个
+        // 可能是给TLM留的 ?()
+        if (packet.onEntityId != this.player.entityId) {
+            return
+        }
+
+        this.broadcastMolangExecute(packet.expression)
     }
 }

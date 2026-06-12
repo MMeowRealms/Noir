@@ -5,6 +5,8 @@ import moe.meowrealms.noir.network.packet.c2s.C2SAnimationRequestPacket
 import moe.meowrealms.noir.network.packet.c2s.C2SHandshakeConfirmedPacket
 import moe.meowrealms.noir.network.packet.c2s.C2SModelDataPayload
 import moe.meowrealms.noir.network.packet.c2s.C2SModelSwitchRequestPacket
+import moe.meowrealms.noir.network.packet.c2s.C2SMolangExecuteRequestPacket
+import moe.meowrealms.noir.network.packet.c2s.C2SStarModelPacket
 
 interface PacketHandler {
     fun receivingDirection(): EnumDirection
@@ -20,4 +22,8 @@ interface PacketHandler {
     fun handleModelSwitchRequest(packet: C2SModelSwitchRequestPacket)
 
     fun handleAnimationRequest(packet: C2SAnimationRequestPacket)
+
+    fun handleStarModel(packet: C2SStarModelPacket)
+
+    fun handleMolangExecuteRequest(packet: C2SMolangExecuteRequestPacket)
 }
