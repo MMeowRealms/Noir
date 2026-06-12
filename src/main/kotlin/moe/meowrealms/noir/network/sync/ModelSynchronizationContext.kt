@@ -6,35 +6,48 @@ import moe.meowrealms.noir.NoirMain
 import moe.meowrealms.noir.model.ModelManager
 import moe.meowrealms.noir.network.ClientConnectionManager.getYsmConnection
 import moe.meowrealms.noir.network.packet.s2c.S2CModelDataPayloadPacket
-import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import rip.ysm.security.YSMByteBuf
 import rip.ysm.security.YsmCrypt
+import space.arim.morepaperlib.scheduling.ScheduledTask
 import java.nio.file.Files
 import java.util.*
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.Volatile
+import kotlin.concurrent.withLock
 import kotlin.math.min
 
 class ModelSynchronizationContext(
     val player: Player
 ) {
+    @Volatile
     private var state: Int = 0
     private lateinit var computedClientKey: ByteArray
     private lateinit var nextKeyInBytes: ByteArray
     private lateinit var subKeyInBytes: ByteArray
     private var allowedModels: Set<ServerModelData> = HashSet()
 
-    fun computeClientKey() {
+    private val scheduledTasksLock = ReentrantLock()
+    private val scheduledTasks: MutableList<ScheduledTask> = ArrayList()
+
+    private fun computeClientKey() {
         this.computedClientKey = ByteArray(56)
 
         Random(this.player.uniqueId.mostSignificantBits + this.player.uniqueId.leastSignificantBits).nextBytes(this.computedClientKey)
     }
 
-    fun filterAllowedModels() {
+    private fun filterAllowedModels() {
         this.allowedModels = HashSet(ModelManager.getCachedModels())
     }
 
     fun restart() {
         this.state = 1
+
+        this.scheduledTasksLock.withLock {
+            for (scheduledTask in this.scheduledTasks) {
+                scheduledTask.cancel()
+            }
+        }
 
         this.begin()
     }
@@ -57,7 +70,6 @@ class ModelSynchronizationContext(
             this.subKeyInBytes = result.nextKey
 
             player.getYsmConnection().send(S2CModelDataPayloadPacket(result.data))
-
         }
     }
 
@@ -65,9 +77,13 @@ class ModelSynchronizationContext(
         ModelManager.onModelSynchronizationDone(this)
     }
 
-    private fun sendRequestedCaches(requestedHashes: MutableList<LongArray>) {
+    private fun sendMissing(requestedHashes: MutableList<LongArray>) {
         NoirMain.instance.morePaperLib.scheduling().asyncScheduler().run(Runnable {
             for (hashes in requestedHashes) {
+                if (this.state < 3) {
+                    return@Runnable
+                }
+
                 val hash1 = hashes[0]
                 val hash2 = hashes[1]
 
@@ -76,6 +92,7 @@ class ModelSynchronizationContext(
                     val file = ModelManager.getCacheFile(fileName)
 
                     if (Files.exists(file)) {
+                        // TODO uhm, 好吧这里要提防一下allocation stall
                         val fileData = Files.readAllBytes(file)
                         val totalSize = fileData.size
                         val maxChunkSize = 30720
@@ -85,6 +102,11 @@ class ModelSynchronizationContext(
                         var outBuf: YSMByteBuf?
                         var offset = 0
                         while (offset < totalSize) {
+                            // interrupted check
+                            if (this.state < 3) {
+                                return@Runnable
+                            }
+
                             val length = min(chunkSize, totalSize - offset)
                             val garbageLen = 16 + ModelManager.secureRand.nextInt(48)
                             val garbage = ByteArray(garbageLen)
@@ -102,9 +124,19 @@ class ModelSynchronizationContext(
                                 outBuf.rawBuf.writeBytes(fileData, offset, length)
                                 val result = YsmCrypt.encrypt(outBuf.toArray(), this.subKeyInBytes, false)
 
-                                this.player.getYsmConnection().send(S2CModelDataPayloadPacket(result.data))
-
                                 offset += length
+
+                                this.scheduledTasksLock.withLock {
+                                    NoirMain.instance.morePaperLib.scheduling().entitySpecificScheduler(this.player).run(Runnable{
+                                        if (this.state < 3) {
+                                            return@Runnable
+                                        }
+
+                                        this.player.getYsmConnection().send(S2CModelDataPayloadPacket(result.data))
+                                    }, null)?.let {
+                                        this.scheduledTasks.add(it)
+                                    }
+                                }
                             }
                         }
                     }
@@ -239,7 +271,7 @@ class ModelSynchronizationContext(
                         this.state = 3
 
                         NoirMain.instance.slF4JLogger.info("Sending requested hashes: ${requestedHashes.toTypedArray().contentToString()}")
-                        this.sendRequestedCaches(requestedHashes)
+                        this.sendMissing(requestedHashes)
                         return
                     }
 
