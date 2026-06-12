@@ -100,5 +100,6 @@ class NoirMain : JavaPlugin() {
     }
 
     override fun onDisable() {
+
     }
 }

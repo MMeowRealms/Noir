@@ -30,6 +30,7 @@ import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 
+// TODO 等ysm开源了重写()
 object ModelManager {
     private lateinit var workingDir: Path
     private lateinit var keyFilePath: Path
@@ -345,13 +346,14 @@ object ModelManager {
         try {
             Files.walk(modelsDir).use { stream ->
                 CompletableFuture.allOf(*stream.map { path ->
-                    CompletableFuture.runAsync {
+                    CompletableFuture.runAsync({
                         val fileName = path.fileName.toString()
                         try {
                             // 文件夹
                             if (fileName == "ysm.json") {
                                 val modelDir = path.parent
                                 val modelId = modelsDir.relativize(modelDir).toString().replace('\\', '/')
+
                                 YSMFolderDeserializer(modelDir).use { deserializer ->
                                     val rawModel = deserializer.deserialize()
                                     val data = generateCacheFile(modelId, rawModel, cacheDir, isAuth, validCaches)
@@ -381,7 +383,7 @@ object ModelManager {
                         } catch (e: Exception) {
                             NoirMain.instance.slF4JLogger.error("Failed to load model at: $path", e)
                         }
-                    }
+                    }, { NoirMain.instance.morePaperLib.scheduling().asyncScheduler().execute(it) })
                 }.toList().toTypedArray()).join()
             }
         } catch (e: Exception) {
@@ -397,48 +399,50 @@ object ModelManager {
                 CompletableFuture.allOf(*stream.filter {
                     Files.isDirectory(it) && it != baseDir
                 }.map { modelDir ->
-                    CompletableFuture.runAsync {
-                        val packJson = modelDir.resolve("ysm-pack.json")
-                        if (Files.exists(packJson)) {
-                            try {
-                                val packData = ServerModelManager.ServerPackData()
-                                packData.folderPath = baseDir.toUri().relativize(modelDir.toUri()).path
+                    CompletableFuture.runAsync(
+                        {
+                            val packJson = modelDir.resolve("ysm-pack.json")
+                            if (Files.exists(packJson)) {
+                                try {
+                                    val packData = ServerModelManager.ServerPackData()
+                                    packData.folderPath = baseDir.toUri().relativize(modelDir.toUri()).path
 
-                                val jsonStr = Files.readString(packJson, StandardCharsets.UTF_8)
-                                val json = JsonParser.parseString(jsonStr).asJsonObject
-                                if (json.has("name")) packData.name = json.get("name").asString
-                                if (json.has("description")) packData.description = json.get("description").asString
+                                    val jsonStr = Files.readString(packJson, StandardCharsets.UTF_8)
+                                    val json = JsonParser.parseString(jsonStr).asJsonObject
+                                    if (json.has("name")) packData.name = json.get("name").asString
+                                    if (json.has("description")) packData.description = json.get("description").asString
 
-                                if (json.has("lang") && json.get("lang").isJsonObject) {
-                                    packData.lang = HashMap()
-                                    val langObj = json.getAsJsonObject("lang")
-                                    for ((langKey, value) in langObj.entrySet()) {
-                                        if (value.isJsonObject) {
-                                            val translations = HashMap<String, String>()
-                                            for ((transKey, transValue) in value.asJsonObject.entrySet()) {
-                                                translations[transKey] = transValue.asString
+                                    if (json.has("lang") && json.get("lang").isJsonObject) {
+                                        packData.lang = HashMap()
+                                        val langObj = json.getAsJsonObject("lang")
+                                        for ((langKey, value) in langObj.entrySet()) {
+                                            if (value.isJsonObject) {
+                                                val translations = HashMap<String, String>()
+                                                for ((transKey, transValue) in value.asJsonObject.entrySet()) {
+                                                    translations[transKey] = transValue.asString
+                                                }
+                                                packData.lang[langKey] = translations
                                             }
-                                            packData.lang[langKey] = translations
                                         }
                                     }
-                                }
 
-                                val packPng = modelDir.resolve("ysm-pack.png")
-                                if (Files.exists(packPng)) {
-                                    val data = Files.readAllBytes(packPng)
-                                    val (w, h) = dimensionsOfPng(data)
-                                    packData.iconData = data
-                                    packData.iconWidth = w
-                                    packData.iconHeight = h
-                                    packData.iconFormat = 2 // 2 = PNG
-                                }
+                                    val packPng = modelDir.resolve("ysm-pack.png")
+                                    if (Files.exists(packPng)) {
+                                        val data = Files.readAllBytes(packPng)
+                                        val (w, h) = dimensionsOfPng(data)
+                                        packData.iconData = data
+                                        packData.iconWidth = w
+                                        packData.iconHeight = h
+                                        packData.iconFormat = 2 // 2 = PNG
+                                    }
 
-                                this.loadedPacks[packData.folderPath] = packData
-                            } catch (e: Exception) {
-                                NoirMain.instance.slF4JLogger.error("Failed to load pack metadata: $packJson", e)
+                                    this.loadedPacks[packData.folderPath] = packData
+                                } catch (e: Exception) {
+                                    NoirMain.instance.slF4JLogger.error("Failed to load pack metadata: $packJson", e)
+                                }
                             }
-                        }
-                    }
+                        }, { NoirMain.instance.morePaperLib.scheduling().asyncScheduler().execute(it) }
+                    )
                 }.toList().toTypedArray()).join()
             }
         } catch (e: Exception) {
