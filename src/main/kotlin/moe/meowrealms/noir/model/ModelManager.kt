@@ -208,7 +208,7 @@ object ModelManager {
                 FileSystems.newFileSystem(jarFsUri, emptyMap<String, Any>())
             }
 
-            val builtinRoot = fs.getPath("assets", "yes_steve_model", "builtin")
+            val builtinRoot = fs.getPath("builtin_models")
             if (Files.notExists(builtinRoot) || !Files.isDirectory(builtinRoot)) {
                 return
             }
