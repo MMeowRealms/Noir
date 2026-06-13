@@ -27,6 +27,8 @@ class DispatchServerDrivenProperty(var entityId: Int) {
     var molangVarsServerBound: Object2FloatMap<String>? = null
     var molangVarsClientBound: Int2FloatMap? = null
 
+    var tickPacketSyncRequired: Boolean = false
+
     fun isEmpty() = variant == 0.toShort()
 
     fun isFull() = (variant.toInt() and 1) != 0
@@ -44,6 +46,9 @@ class DispatchServerDrivenProperty(var entityId: Int) {
 
     fun flying(flying: Boolean) = apply {
         variant = (variant.toInt() or (1 shl 1)).toShort()
+        if (this.flying != flying) {
+            this.tickPacketSyncRequired = true
+        }
         this.flying = flying
     }
 
@@ -72,16 +77,25 @@ class DispatchServerDrivenProperty(var entityId: Int) {
 
     fun expLevel(expLevel: Int) = apply {
         variant = (variant.toInt() or (1 shl 3)).toShort()
+        if (this.expLevel != expLevel) {
+            this.tickPacketSyncRequired = true
+        }
         this.expLevel = expLevel
     }
 
     fun foodLevel(foodLevel: Int) = apply {
         variant = (variant.toInt() or (1 shl 4)).toShort()
+        if (this.foodLevel != foodLevel) {
+            this.tickPacketSyncRequired = true
+        }
         this.foodLevel = foodLevel
     }
 
     fun health(health: Int) = apply {
         variant = (variant.toInt() or (1 shl 5)).toShort()
+        if (this.health != health) {
+            this.tickPacketSyncRequired = true
+        }
         this.health = health
     }
 

@@ -23,11 +23,13 @@ import moe.meowrealms.noir.network.packet.s2c.S2CStarModelListPacket
 import moe.meowrealms.noir.network.sync.ModelSynchronizationContext
 import moe.meowrealms.noir.tracker.EntityTracker
 import org.bukkit.entity.Player
+import space.arim.morepaperlib.scheduling.ScheduledTask
 
 class ClientConnection (
     private val player: Player,
 ): PacketHandler {
     private lateinit var synchronizationContext: ModelSynchronizationContext
+    private var tickTask: ScheduledTask? = null
     private var handshakeConfirmed: Boolean = false
 
     fun onConnected() {
@@ -35,10 +37,44 @@ class ClientConnection (
 
         NoirMain.instance.slF4JLogger.info("Sending handshake to player ${this.player.uniqueId}")
         this.send(S2CHandshakeRequestPacket(ClientConnectionManager.VERSION))
+
+        // kick-start ticking
+        NoirMain.instance.morePaperLib.scheduling().entitySpecificScheduler(this.player).runAtFixedRate(Runnable{
+            this.tickConnection()
+        }, null, 1L, 1L)?.let {
+            this.tickTask = it
+        }
     }
 
     fun onDisconnected() {
         this.synchronizationContext.cleanup()
+
+        this.tickTask?.cancel()
+    }
+
+    private fun syncEntityStatesToAnimationData() {
+        val playerData = this.player.getNoirData() ?: return
+        val animationData = playerData.animationData
+
+        animationData.health(this.player.health.toInt())
+        animationData.expLevel(this.player.exp.toInt())
+        animationData.foodLevel(this.player.foodLevel)
+        animationData.flying(this.player.isFlying)
+    }
+
+    private fun checkAndSyncAnimationState() {
+        val playerData = this.player.getNoirData() ?: return
+
+        if (playerData.animationData.tickPacketSyncRequired) {
+            playerData.animationData.tickPacketSyncRequired = false
+            this.syncModelAnimationData()
+        }
+    }
+
+    fun tickConnection() {
+        this.syncEntityStatesToAnimationData()
+
+        this.checkAndSyncAnimationState()
     }
 
     fun syncModelSubscribes() {
