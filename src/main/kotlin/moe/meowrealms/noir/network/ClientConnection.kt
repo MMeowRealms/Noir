@@ -11,12 +11,14 @@ import moe.meowrealms.noir.network.packet.c2s.C2SHandshakeConfirmedPacket
 import moe.meowrealms.noir.network.packet.c2s.C2SModelDataPayload
 import moe.meowrealms.noir.network.packet.c2s.C2SModelSwitchRequestPacket
 import moe.meowrealms.noir.network.packet.c2s.C2SMolangExecuteRequestPacket
+import moe.meowrealms.noir.network.packet.c2s.C2SMolangExpressionValueSyncPacket
 import moe.meowrealms.noir.network.packet.c2s.C2SStarModelPacket
 import moe.meowrealms.noir.network.packet.s2c.S2CAuthModelListPacket
 import moe.meowrealms.noir.network.packet.s2c.S2CEntityModelAnimationDataPacket
 import moe.meowrealms.noir.network.packet.s2c.S2CEntityModelSelectionDataPacket
 import moe.meowrealms.noir.network.packet.s2c.S2CHandshakeRequestPacket
 import moe.meowrealms.noir.network.packet.s2c.S2CMolangExecutePacket
+import moe.meowrealms.noir.network.packet.s2c.S2CMolangExpressionValueSyncPacket
 import moe.meowrealms.noir.network.packet.s2c.S2CStarModelListPacket
 import moe.meowrealms.noir.network.sync.ModelSynchronizationContext
 import moe.meowrealms.noir.tracker.EntityTracker
@@ -210,5 +212,14 @@ class ClientConnection (
         }
 
         this.broadcastMolangExecute(packet.expression)
+    }
+
+    override fun handleMolangExpressionValueSyncPacket(packet: C2SMolangExpressionValueSyncPacket) {
+        val toSend = S2CMolangExpressionValueSyncPacket(this.player.entityId, packet.expressionValues)
+
+        this.send(toSend)
+        for (watching in EntityTracker.getVisible(this.player)) {
+            watching.getYsmConnection().send(toSend)
+        }
     }
 }

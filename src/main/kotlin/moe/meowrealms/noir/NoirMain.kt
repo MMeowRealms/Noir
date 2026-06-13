@@ -1,5 +1,6 @@
 package moe.meowrealms.noir
 
+import it.unimi.dsi.fastutil.floats.FloatArrayList
 import moe.meowrealms.noir.data.PlayerDataStorage
 import moe.meowrealms.noir.model.ModelManager
 import moe.meowrealms.noir.network.ClientConnectionManager
@@ -49,6 +50,8 @@ class NoirMain : JavaPlugin() {
         packetRegistry.register(8, S2CStarModelListPacket::class) { S2CStarModelListPacket(HashSet()) }
         packetRegistry.register(9, C2SStarModelPacket::class) { C2SStarModelPacket("", true) }
         packetRegistry.register(17, C2SMolangExecuteRequestPacket::class) { C2SMolangExecuteRequestPacket("", 0) }
+        packetRegistry.register(19, S2CMolangExpressionValueSyncPacket::class) { S2CMolangExpressionValueSyncPacket(0, FloatArrayList()) }
+        packetRegistry.register(18, C2SMolangExpressionValueSyncPacket::class) { C2SMolangExpressionValueSyncPacket(FloatArrayList()) }
     }
 
     fun initNetworking() {
