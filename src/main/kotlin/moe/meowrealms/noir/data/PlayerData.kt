@@ -51,6 +51,10 @@ class PlayerData (
         this.dirty = true
     }
 
+    fun isDirty(): Boolean{
+        return this.dirty
+    }
+
     fun validateAndCorrectModelSelection(defaultModelIdFallback: String, defaultTextureFallback: String) {
         val validateResult = ModelManager.validateSelectedModel(this.selectedModelId, this.selectedModelTexture)
         val defaultModelConfig = ModelManager.getDefaultModelConfig(defaultModelIdFallback, defaultTextureFallback)
@@ -60,9 +64,13 @@ class PlayerData (
             this.selectedModelId = defaultModelConfig.left
             this.selectedModelTexture = defaultModelConfig.right
 
+            this.markDirty()
+
         // else: texture not found
         } else if (!validateResult.right) {
             this.selectedModelTexture = defaultModelConfig.right
+
+            this.markDirty()
         }
     }
 

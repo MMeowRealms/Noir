@@ -40,7 +40,9 @@ object PlayerDataStorage : Listener {
 
     fun saveAll() {
         loaded.forEach { (uuid, data) ->
-            enqueueSave(uuid, data)
+            if (data.isDirty()) {
+                enqueueSave(uuid, data)
+            }
         }
 
         val allFutures = pendingSaves.toTypedArray<CompletableFuture<Void>>()
@@ -163,7 +165,9 @@ object PlayerDataStorage : Listener {
         val uuid = event.player.uniqueId
         val data = loaded.remove(uuid) ?: return
 
-        enqueueSave(uuid, data)
+        if (data.isDirty()) {
+            enqueueSave(uuid, data)
+        }
     }
 
     fun Player.getNoirData(): PlayerData? = loaded[uniqueId]
