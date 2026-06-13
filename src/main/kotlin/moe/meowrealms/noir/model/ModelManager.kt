@@ -35,6 +35,8 @@ object ModelManager {
     private lateinit var workingDir: Path
     private lateinit var keyFilePath: Path
     private lateinit var cacheFolderPath: Path
+
+    private lateinit var modelsDir: Path
     private lateinit var builtinModelsFolderPath: Path
     private lateinit var customModelsFolderPath: Path
     private lateinit var authModelsFolderPath: Path
@@ -170,9 +172,11 @@ object ModelManager {
         }
 
         this.cacheFolderPath = this.workingDir.resolve("caches")
-        this.builtinModelsFolderPath = this.workingDir.resolve("builtin_models")
-        this.customModelsFolderPath = this.workingDir.resolve("custom_models")
-        this.authModelsFolderPath = this.workingDir.resolve("auth_required_models")
+        this.modelsDir = this.workingDir.resolve("models")
+
+        this.builtinModelsFolderPath = this.modelsDir.resolve("builtin")
+        this.customModelsFolderPath = this.modelsDir.resolve("custom")
+        this.authModelsFolderPath =  this.modelsDir.resolve("auth")
 
         this.keyFilePath = this.workingDir.resolve("password.bin")
 
