@@ -35,12 +35,14 @@ object ModelManager {
     private lateinit var workingDir: Path
     private lateinit var keyFilePath: Path
     private lateinit var cacheFolderPath: Path
+    private lateinit var cacheDeterminerFilePath: Path
 
     private lateinit var modelsDir: Path
     private lateinit var builtinModelsFolderPath: Path
     private lateinit var customModelsFolderPath: Path
     private lateinit var authModelsFolderPath: Path
 
+    var cacheDeterminer: Long = 0
     private lateinit var cacheKey: ByteArray
 
     val secureRand = SecureRandom()
@@ -179,6 +181,7 @@ object ModelManager {
         this.authModelsFolderPath =  this.modelsDir.resolve("auth")
 
         this.keyFilePath = this.workingDir.resolve("password.bin")
+        this.cacheDeterminerFilePath = this.workingDir.resolve("cache_key.bin")
 
         if (!Files.exists(this.cacheFolderPath))
             Files.createDirectories(this.cacheFolderPath)
@@ -195,6 +198,20 @@ object ModelManager {
         this.extractBuiltinAssets()
 
         this.loadKeyFile()
+        this.loadCacheDeterminer()
+    }
+
+    fun loadCacheDeterminer() {
+        if (!Files.exists(this.cacheDeterminerFilePath)) {
+            NoirMain.instance.slF4JLogger.info("Cache key dose not exists! Creating.")
+            this.cacheDeterminer = this.secureRand.nextLong()
+
+            Files.writeString(this.cacheDeterminerFilePath, this.cacheDeterminer.toString())
+            return
+        }
+
+        this.cacheDeterminer = Files.readString(this.cacheDeterminerFilePath).toLong()
+        NoirMain.instance.slF4JLogger.info("Loaded cache key file.")
     }
 
     fun extractBuiltinAssets() {

@@ -297,9 +297,13 @@ class ModelSynchronizationContext(
         try {
             YSMByteBuf(Unpooled.buffer()).use { outBuf ->
                 outBuf.writeGarbageHeader(garbageLen, garbage)
+                // sub packet id
                 outBuf.writeVarInt(3)
-                outBuf.writeVarLong(0L)
+                // cache folder name
+                outBuf.writeVarLong(ModelManager.cacheDeterminer)
+                // cache key
                 outBuf.rawBuf.writeBytes(ModelManager.cacheKey())
+                // client key
                 outBuf.rawBuf.writeBytes(this.computedClientKey)
                 outBuf.writeVarInt(this.allowedModels.size)
 
