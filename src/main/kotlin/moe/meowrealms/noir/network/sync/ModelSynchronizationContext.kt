@@ -29,9 +29,10 @@ class ModelSynchronizationContext(
     val player: Player
 ) {
     companion object {
-        private val globalRateLimiter = ModelSyncRateLimiter(
-            NoirConstants.ModelSyncConstants.GLOBAL_RATE_LIMIT_MBPS
-        )
+        // lazy to ensure config.yml values are loaded before first access
+        private val globalRateLimiter by lazy {
+            ModelSyncRateLimiter(NoirConstants.ModelSyncConstants.GLOBAL_RATE_LIMIT_MBPS)
+        }
     }
 
     @Volatile
