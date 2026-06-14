@@ -1,4 +1,6 @@
 noir.command.no_permission=<#cdd6f4>[</#cdd6f4><#89dceb>Noir</#89dceb><#cdd6f4>]</#cdd6f4><#f38ba8>You do not have permission to run this command
+noir.command.help=<#cdd6f4>[</#cdd6f4><#89dceb>Noir</#89dceb><#cdd6f4>]</#cdd6f4>Available subcommands: <#89dceb>/noir reload</#89dceb> - Reload models
+noir.command.unknown_subcommand=<#cdd6f4>[</#cdd6f4><#89dceb>Noir</#89dceb><#cdd6f4>]</#cdd6f4><#f38ba8>Unknown subcommand, use <#89dceb>/noir</#89dceb><#f38ba8> for help
 noir.reload_models.started=<#cdd6f4>[</#cdd6f4><#89dceb>Noir</#89dceb><#cdd6f4>]</#cdd6f4>Reloading models...
 noir.reload_models.success=<#cdd6f4>[</#cdd6f4><#89dceb>Noir</#89dceb><#cdd6f4>]</#cdd6f4><#a6e3a1>Model reload completed, loaded <count> models in <time_ms> ms
 noir.reload_models.failed=<#cdd6f4>[</#cdd6f4><#89dceb>Noir</#89dceb><#cdd6f4>]</#cdd6f4><#f38ba8>Model reload failed: <reason>

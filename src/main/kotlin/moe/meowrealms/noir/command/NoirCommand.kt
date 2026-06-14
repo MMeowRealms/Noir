@@ -6,16 +6,15 @@ import moe.meowrealms.noir.model.ModelManager
 import moe.meowrealms.noir.network.ClientConnectionManager
 import org.bukkit.command.Command
 import org.bukkit.command.CommandSender
-import org.bukkit.entity.Player
 
-class ReloadModelsCommand : Command(
-    "reloadmodels",
-    "Reload Noir YSM models",
-    "/reloadmodels",
-    emptyList()
+class NoirCommand : Command(
+    "noir",
+    "Noir plugin main command",
+    "/noir <reload>",
+    listOf()
 ) {
     init {
-        this.permission = NoirConstants.PermissionConstants.RELOAD_MODELS_COMMAND
+        this.permission = NoirConstants.PermissionConstants.NOIR_COMMAND
     }
 
     override fun execute(
@@ -23,9 +22,28 @@ class ReloadModelsCommand : Command(
         label: String,
         args: Array<out String>
     ): Boolean {
-        if (!sender.hasPermission(NoirConstants.PermissionConstants.RELOAD_MODELS_COMMAND)) {
+        if (!sender.hasPermission(NoirConstants.PermissionConstants.NOIR_COMMAND)) {
             this.sendI18n(sender, NoirConstants.LanguageConstants.NO_PERMISSION)
             return true
+        }
+
+        if (args.isEmpty()) {
+            this.sendI18n(sender, NoirConstants.LanguageConstants.COMMAND_HELP)
+            return true
+        }
+
+        when (args[0].lowercase()) {
+            "reload" -> this.executeReload(sender)
+            else -> this.sendI18n(sender, NoirConstants.LanguageConstants.COMMAND_UNKNOWN_SUBCOMMAND)
+        }
+
+        return true
+    }
+
+    private fun executeReload(sender: CommandSender) {
+        if (!sender.hasPermission(NoirConstants.PermissionConstants.RELOAD_MODELS_COMMAND)) {
+            this.sendI18n(sender, NoirConstants.LanguageConstants.NO_PERMISSION)
+            return
         }
 
         this.sendI18n(sender, NoirConstants.LanguageConstants.RELOAD_MODELS_STARTED)
@@ -60,8 +78,6 @@ class ReloadModelsCommand : Command(
                 )
             }
         })
-
-        return true
     }
 
     override fun tabComplete(
@@ -69,6 +85,12 @@ class ReloadModelsCommand : Command(
         alias: String,
         args: Array<out String>
     ): MutableList<String> {
+        if (args.size == 1) {
+            return mutableListOf("reload").filter {
+                it.startsWith(args[0], ignoreCase = true)
+            }.toMutableList()
+        }
+
         return mutableListOf()
     }
 

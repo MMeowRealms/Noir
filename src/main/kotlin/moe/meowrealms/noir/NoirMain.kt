@@ -1,7 +1,7 @@
 package moe.meowrealms.noir
 
 import it.unimi.dsi.fastutil.floats.FloatArrayList
-import moe.meowrealms.noir.command.ReloadModelsCommand
+import moe.meowrealms.noir.command.NoirCommand
 import moe.meowrealms.noir.data.PlayerDataStorage
 import moe.meowrealms.noir.i18n.I18NManager
 import moe.meowrealms.noir.model.ModelManager
@@ -119,7 +119,7 @@ class NoirMain : JavaPlugin() {
     }
 
     fun initCommands() {
-        this.server.commandMap.register("noir", ReloadModelsCommand())
+        this.server.commandMap.register("noir", NoirCommand())
 
         this.slF4JLogger.info("Commands initialized.")
     }
