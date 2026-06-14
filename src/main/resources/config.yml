@@ -1,0 +1,6 @@
+# Model synchronization rate limiting
+model-sync:
+  # Per-player bandwidth limit in Mbps (0 = unlimited)
+  per-player-rate-limit-mbps: 8.0
+  # Global total bandwidth limit in Mbps across all players (0 = unlimited)
+  global-rate-limit-mbps: 40.0

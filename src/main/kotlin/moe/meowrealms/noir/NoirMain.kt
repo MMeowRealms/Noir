@@ -102,6 +102,18 @@ class NoirMain : JavaPlugin() {
         this.slF4JLogger.info("I18n initialized.")
     }
 
+    fun initConfig() {
+        this.saveDefaultConfig()
+
+        val cfg = this.config
+        NoirConstants.ModelSyncConstants.PER_PLAYER_RATE_LIMIT_MBPS =
+            cfg.getDouble("model-sync.per-player-rate-limit-mbps", 8.0)
+        NoirConstants.ModelSyncConstants.GLOBAL_RATE_LIMIT_MBPS =
+            cfg.getDouble("model-sync.global-rate-limit-mbps", 40.0)
+
+        this.slF4JLogger.info("Config loaded: per-player=${NoirConstants.ModelSyncConstants.PER_PLAYER_RATE_LIMIT_MBPS}Mbps, global=${NoirConstants.ModelSyncConstants.GLOBAL_RATE_LIMIT_MBPS}Mbps")
+    }
+
     fun initCommands() {
         this.server.commandMap.register("noir", ReloadModelsCommand())
 
@@ -111,6 +123,7 @@ class NoirMain : JavaPlugin() {
     override fun onEnable() {
         instance = this
 
+        this.initConfig()
         this.initI18n()
         this.initNetworking()
         this.initAndLoadModels()

@@ -1,7 +1,10 @@
 package moe.meowrealms.noir.network.sync
 
 import com.elfmcys.yesstevemodel.model.format.ServerModelData
+import io.netty.buffer.ByteBuf
 import io.netty.buffer.Unpooled
+import io.netty.util.ReferenceCountUtil
+import moe.meowrealms.noir.NoirConstants
 import moe.meowrealms.noir.NoirMain
 import moe.meowrealms.noir.model.ModelManager
 import moe.meowrealms.noir.network.ClientConnectionManager.getYsmConnection
@@ -10,16 +13,27 @@ import org.bukkit.entity.Player
 import rip.ysm.security.YSMByteBuf
 import rip.ysm.security.YsmCrypt
 import space.arim.morepaperlib.scheduling.ScheduledTask
+import java.nio.ByteBuffer
+import java.nio.channels.SeekableByteChannel
 import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.StandardOpenOption
 import java.util.*
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.Volatile
 import kotlin.concurrent.withLock
+import kotlin.math.max
 import kotlin.math.min
 
 class ModelSynchronizationContext(
     val player: Player
 ) {
+    companion object {
+        private val globalRateLimiter = ModelSyncRateLimiter(
+            NoirConstants.ModelSyncConstants.GLOBAL_RATE_LIMIT_MBPS
+        )
+    }
+
     @Volatile
     private var state: Int = 0
     private lateinit var computedClientKey: ByteArray
@@ -29,6 +43,10 @@ class ModelSynchronizationContext(
 
     private val scheduledTasksLock = ReentrantLock()
     private val scheduledTasks: MutableList<ScheduledTask> = ArrayList()
+    private val rateLimiter = ModelSyncRateLimiter(NoirConstants.ModelSyncConstants.PER_PLAYER_RATE_LIMIT_MBPS)
+
+    // reusable ByteBuf for chunk payload building, allocated once in sendMissing()
+    private var reusableChunkBuf: ByteBuf? = null
 
     private fun computeClientKey() {
         this.computedClientKey = ByteArray(56)
@@ -43,6 +61,12 @@ class ModelSynchronizationContext(
     fun restart() {
         this.state = 1
 
+        this.cancelScheduledTasks()
+
+        this.begin()
+    }
+
+    private fun cancelScheduledTasks() {
         this.scheduledTasksLock.withLock {
             for (scheduledTask in this.scheduledTasks) {
                 scheduledTask.cancel()
@@ -50,12 +74,11 @@ class ModelSynchronizationContext(
 
             this.scheduledTasks.clear()
         }
-
-        this.begin()
     }
 
     fun begin() {
         this.state = 1
+        this.rateLimiter.reset()
 
         this.computeClientKey()
         this.filterAllowedModels()
@@ -76,79 +99,194 @@ class ModelSynchronizationContext(
     }
 
     fun cleanup() {
+        this.state = 0
+        this.cancelScheduledTasks()
+
+        this.releaseReusableChunkBuf()
+
         ModelManager.onModelSynchronizationDone(this)
     }
 
-    private fun sendMissing(requestedHashes: MutableList<LongArray>) {
-        NoirMain.instance.morePaperLib.scheduling().asyncScheduler().run(Runnable {
-            for (hashes in requestedHashes) {
-                if (this.state < 3) {
-                    return@Runnable
-                }
-
-                val hash1 = hashes[0]
-                val hash2 = hashes[1]
-
-                try {
-                    val fileName = String.format("%016x%016x", hash1, hash2)
-                    val file = ModelManager.getCacheFile(fileName)
-
-                    if (Files.exists(file)) {
-                        // TODO uhm, 好吧这里要提防一下allocation stall
-                        val fileData = Files.readAllBytes(file)
-                        val totalSize = fileData.size
-                        val maxChunkSize = 30720
-                        val chunkCount = (totalSize + maxChunkSize - 1) / maxChunkSize
-                        val chunkSize = (totalSize + chunkCount - 1) / chunkCount
-
-                        var outBuf: YSMByteBuf?
-                        var offset = 0
-                        while (offset < totalSize) {
-                            // interrupted check
-                            if (this.state < 3) {
-                                return@Runnable
-                            }
-
-                            val length = min(chunkSize, totalSize - offset)
-                            val garbageLen = 16 + ModelManager.secureRand.nextInt(48)
-                            val garbage = ByteArray(garbageLen)
-                            ModelManager.secureRand.nextBytes(garbage)
-                            outBuf = YSMByteBuf(Unpooled.buffer())
-
-                            outBuf.use {
-                                outBuf.writeGarbageHeader(garbageLen, garbage)
-                                outBuf.writeVarInt(5)
-                                outBuf.writeVarLong(hash1)
-                                outBuf.writeVarLong(hash2)
-                                outBuf.writeVarInt(totalSize)
-                                outBuf.writeVarInt(offset)
-                                outBuf.writeVarInt(length)
-                                outBuf.rawBuf.writeBytes(fileData, offset, length)
-                                val result = YsmCrypt.encrypt(outBuf.toArray(), this.subKeyInBytes, false)
-
-                                offset += length
-
-                                this.scheduledTasksLock.withLock {
-                                    NoirMain.instance.morePaperLib.scheduling().entitySpecificScheduler(this.player).run(Runnable{
-                                        if (this.state < 3) {
-                                            return@Runnable
-                                        }
-
-                                        this.player.getYsmConnection().send(S2CModelDataPayloadPacket(result.data))
-                                    }, null)?.let {
-                                        this.scheduledTasks.add(it)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                } catch (e: java.lang.Exception) {
-                    NoirMain.instance.slF4JLogger.error("Failed to send model chunks to ${this.player.name}", e)
-                }
-
-            }
-        })
+    private fun releaseReusableChunkBuf() {
+        this.reusableChunkBuf?.let {
+            ReferenceCountUtil.safeRelease(it)
+            this.reusableChunkBuf = null
+        }
     }
+
+    private fun sendMissing(requestedHashes: MutableList<LongArray>) {
+        val queue = ArrayDeque<RequestedModelCache>(requestedHashes.size)
+
+        for (hashes in requestedHashes) {
+            if (hashes.size >= 2) {
+                queue.add(RequestedModelCache(hashes[0], hashes[1]))
+            }
+        }
+
+        // pre-allocate reusable ByteBuf for all chunk payloads in this sync
+        this.releaseReusableChunkBuf()
+        this.reusableChunkBuf = Unpooled.buffer(NoirConstants.ModelSyncConstants.MAX_CHUNK_BYTES + 96)
+
+        this.scheduleNextRequestedModel(queue)
+    }
+
+    private fun scheduleNextRequestedModel(queue: ArrayDeque<RequestedModelCache>) {
+        if (this.state < 3) {
+            return
+        }
+
+        this.trackScheduledTask(
+            NoirMain.instance.morePaperLib.scheduling().asyncScheduler().run(Runnable {
+                this.prepareNextRequestedModel(queue)
+            })
+        )
+    }
+
+    private fun prepareNextRequestedModel(queue: ArrayDeque<RequestedModelCache>) {
+        if (this.state < 3) {
+            return
+        }
+
+        val requested = queue.poll() ?: return
+        val fileName = String.format("%016x%016x", requested.hash1, requested.hash2)
+        val file = ModelManager.getCacheFile(fileName)
+
+        try {
+            if (!Files.exists(file)) {
+                this.scheduleNextRequestedModel(queue)
+                return
+            }
+
+            val totalSize = Files.size(file)
+            if (totalSize > Int.MAX_VALUE) {
+                NoirMain.instance.slF4JLogger.warn("Model cache file is too large to sync: $file")
+                this.scheduleNextRequestedModel(queue)
+                return
+            }
+
+            val channel = Files.newByteChannel(file, StandardOpenOption.READ)
+
+            this.scheduleNextModelChunk(
+                ModelCacheTransfer(file, requested.hash1, requested.hash2, totalSize.toInt(), queue, channel)
+            )
+        } catch (e: Exception) {
+            NoirMain.instance.slF4JLogger.error("Failed to prepare model cache file: $file", e)
+            this.scheduleNextRequestedModel(queue)
+        }
+    }
+
+    private fun scheduleNextModelChunk(transfer: ModelCacheTransfer) {
+        if (this.state < 3) {
+            return
+        }
+
+        this.trackScheduledTask(
+            NoirMain.instance.morePaperLib.scheduling().asyncScheduler().run(Runnable {
+                this.processNextModelChunk(transfer)
+            })
+        )
+    }
+
+    private fun processNextModelChunk(transfer: ModelCacheTransfer) {
+        if (this.state < 3) {
+            this.closeTransferChannel(transfer)
+            return
+        }
+
+        if (transfer.offset >= transfer.totalSize) {
+            this.closeTransferChannel(transfer)
+            this.scheduleNextRequestedModel(transfer.remainingRequests)
+            return
+        }
+
+        try {
+            val length = this.readModelChunk(transfer)
+            if (length <= 0) {
+                this.closeTransferChannel(transfer)
+                this.scheduleNextRequestedModel(transfer.remainingRequests)
+                return
+            }
+
+            val offset = transfer.offset
+            val payload = this.buildModelChunkPayload(
+                transfer.hash1,
+                transfer.hash2,
+                transfer.totalSize,
+                offset,
+                transfer.buffer,
+                length
+            )
+            transfer.offset += length
+
+            this.scheduleRateLimitedModelPayload(payload, 3) {
+                this.scheduleNextModelChunk(transfer)
+            }
+        } catch (e: Exception) {
+            NoirMain.instance.slF4JLogger.error("Failed to send model chunks to ${this.player.name}", e)
+            this.closeTransferChannel(transfer)
+            this.scheduleNextRequestedModel(transfer.remainingRequests)
+        }
+    }
+
+    private fun closeTransferChannel(transfer: ModelCacheTransfer) {
+        try {
+            transfer.channel.close()
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun readModelChunk(transfer: ModelCacheTransfer): Int {
+        val expectedLength = min(transfer.buffer.size, transfer.totalSize - transfer.offset)
+        val byteBuffer = ByteBuffer.wrap(transfer.buffer, 0, expectedLength)
+
+        transfer.channel.position(transfer.offset.toLong())
+        return transfer.channel.read(byteBuffer)
+    }
+
+    private fun buildModelChunkPayload(
+        hash1: Long,
+        hash2: Long,
+        totalSize: Int,
+        offset: Int,
+        buffer: ByteArray,
+        length: Int
+    ): ByteArray {
+        val garbageLen = 16 + ModelManager.secureRand.nextInt(48)
+        val garbage = ByteArray(garbageLen)
+        ModelManager.secureRand.nextBytes(garbage)
+
+        val chunkBuf = this.reusableChunkBuf
+        if (chunkBuf != null) {
+            // reuse pre-allocated buffer: clear and write fresh data
+            chunkBuf.clear()
+            val outBuf = YSMByteBuf(chunkBuf)
+            outBuf.writeGarbageHeader(garbageLen, garbage)
+            outBuf.writeVarInt(5)
+            outBuf.writeVarLong(hash1)
+            outBuf.writeVarLong(hash2)
+            outBuf.writeVarInt(totalSize)
+            outBuf.writeVarInt(offset)
+            outBuf.writeVarInt(length)
+            outBuf.rawBuf.writeBytes(buffer, 0, length)
+
+            return YsmCrypt.encrypt(outBuf.toArray(), this.subKeyInBytes, false).data
+        } else {
+            // fallback: allocate fresh buffer (shouldn't happen in normal flow)
+            YSMByteBuf(Unpooled.buffer(length + 96)).use { outBuf ->
+                outBuf.writeGarbageHeader(garbageLen, garbage)
+                outBuf.writeVarInt(5)
+                outBuf.writeVarLong(hash1)
+                outBuf.writeVarLong(hash2)
+                outBuf.writeVarInt(totalSize)
+                outBuf.writeVarInt(offset)
+                outBuf.writeVarInt(length)
+                outBuf.rawBuf.writeBytes(buffer, 0, length)
+
+                return YsmCrypt.encrypt(outBuf.toArray(), this.subKeyInBytes, false).data
+            }
+        }
+    }
+
 
     private fun sendCacheList() {
         val garbageLen = 16 + ModelManager.secureRand.nextInt(48)
@@ -220,11 +358,54 @@ class ModelSynchronizationContext(
                 outBuf.writeVarInt(0)
                 val result = YsmCrypt.encrypt(outBuf.toArray(), this.nextKeyInBytes, false)
 
-                this.player.getYsmConnection().send(S2CModelDataPayloadPacket(result.data()))
+                this.scheduleRateLimitedModelPayload(result.data(), 2)
             }
         } catch (e: java.lang.Exception) {
             throw RuntimeException(e)
         }
+    }
+
+    private fun scheduleRateLimitedModelPayload(
+        payload: ByteArray,
+        minimumState: Int,
+        onSent: (() -> Unit)? = null
+    ) {
+        val perPlayerDelay = this.rateLimiter.reserveDelayTicks(payload.size)
+        val globalDelay = globalRateLimiter.reserveDelayTicks(payload.size)
+        val delayTicks = max(perPlayerDelay, globalDelay)
+
+        val task = if (delayTicks <= 0L) {
+            NoirMain.instance.morePaperLib.scheduling().entitySpecificScheduler(this.player).run(Runnable {
+                if (this.sendModelPayloadIfAlive(payload, minimumState)) {
+                    onSent?.invoke()
+                }
+            }, null)
+        } else {
+            NoirMain.instance.morePaperLib.scheduling().entitySpecificScheduler(this.player).runDelayed(Runnable {
+                if (this.sendModelPayloadIfAlive(payload, minimumState)) {
+                    onSent?.invoke()
+                }
+            }, null, delayTicks)
+        }
+
+        this.trackScheduledTask(task)
+    }
+
+    private fun trackScheduledTask(task: ScheduledTask?) {
+        this.scheduledTasksLock.withLock {
+            task?.let {
+                this.scheduledTasks.add(it)
+            }
+        }
+    }
+
+    private fun sendModelPayloadIfAlive(payload: ByteArray, minimumState: Int): Boolean {
+        if (this.state < minimumState) {
+            return false
+        }
+
+        this.player.getYsmConnection().send(S2CModelDataPayloadPacket(payload))
+        return true
     }
 
     fun handleClientReply(data: ByteArray) {
@@ -288,4 +469,21 @@ class ModelSynchronizationContext(
             throw e
         }
     }
+}
+
+private data class RequestedModelCache(
+    val hash1: Long,
+    val hash2: Long
+)
+
+private class ModelCacheTransfer(
+    val file: Path,
+    val hash1: Long,
+    val hash2: Long,
+    val totalSize: Int,
+    val remainingRequests: ArrayDeque<RequestedModelCache>,
+    val channel: SeekableByteChannel
+) {
+    val buffer: ByteArray = ByteArray(NoirConstants.ModelSyncConstants.MAX_CHUNK_BYTES)
+    var offset: Int = 0
 }
