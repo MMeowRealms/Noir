@@ -17,6 +17,7 @@ object NoirConstants {
     object PermissionConstants {
         const val NOIR_COMMAND = "noir.command"
         const val RELOAD_MODELS_COMMAND = "noir.command.reload"
+        const val SET_MODEL_COMMAND = "noir.command.setmodel"
     }
 
     object LanguageConstants {
@@ -26,5 +27,11 @@ object NoirConstants {
         const val RELOAD_MODELS_STARTED = "noir.reload_models.started"
         const val RELOAD_MODELS_SUCCESS = "noir.reload_models.success"
         const val RELOAD_MODELS_FAILED = "noir.reload_models.failed"
+        const val SET_MODEL_USAGE = "noir.set_model.usage"
+        const val SET_MODEL_PLAYER_NOT_FOUND = "noir.set_model.player_not_found"
+        const val SET_MODEL_NOT_FOUND = "noir.set_model.model_not_found"
+        const val SET_MODEL_TEXTURE_NOT_FOUND = "noir.set_model.texture_not_found"
+        const val SET_MODEL_PLAYER_NO_DATA = "noir.set_model.player_no_data"
+        const val SET_MODEL_SUCCESS = "noir.set_model.success"
     }
 }

@@ -2,17 +2,25 @@ package moe.meowrealms.noir.command
 
 import moe.meowrealms.noir.NoirConstants
 import moe.meowrealms.noir.NoirMain
+import moe.meowrealms.noir.data.PlayerDataStorage.getNoirData
 import moe.meowrealms.noir.model.ModelManager
 import moe.meowrealms.noir.network.ClientConnectionManager
+import moe.meowrealms.noir.network.ClientConnectionManager.getYsmConnection
+import org.bukkit.Bukkit
 import org.bukkit.command.Command
 import org.bukkit.command.CommandSender
 
 class NoirCommand : Command(
     "noir",
     "Noir plugin main command",
-    "/noir <reload>",
+    "/noir <reload|setmodel>",
     listOf()
 ) {
+    private val subcommands: Map<String, (CommandSender, Array<out String>) -> Unit> = mapOf(
+        "reload" to ::executeReload,
+        "setmodel" to ::executeSetModel
+    )
+
     init {
         this.permission = NoirConstants.PermissionConstants.NOIR_COMMAND
     }
@@ -32,15 +40,19 @@ class NoirCommand : Command(
             return true
         }
 
-        when (args[0].lowercase()) {
-            "reload" -> this.executeReload(sender)
-            else -> this.sendI18n(sender, NoirConstants.LanguageConstants.COMMAND_UNKNOWN_SUBCOMMAND)
+        val handler = subcommands[args[0].lowercase()]
+        if (handler != null) {
+            handler(sender, args)
+        } else {
+            this.sendI18n(sender, NoirConstants.LanguageConstants.COMMAND_UNKNOWN_SUBCOMMAND)
         }
 
         return true
     }
 
-    private fun executeReload(sender: CommandSender) {
+    // --- subcommands ---
+
+    private fun executeReload(sender: CommandSender, @Suppress("UNUSED_PARAMETER") args: Array<out String>) {
         if (!sender.hasPermission(NoirConstants.PermissionConstants.RELOAD_MODELS_COMMAND)) {
             this.sendI18n(sender, NoirConstants.LanguageConstants.NO_PERMISSION)
             return
@@ -80,19 +92,86 @@ class NoirCommand : Command(
         })
     }
 
+    private fun executeSetModel(sender: CommandSender, args: Array<out String>) {
+        if (!sender.hasPermission(NoirConstants.PermissionConstants.SET_MODEL_COMMAND)) {
+            this.sendI18n(sender, NoirConstants.LanguageConstants.NO_PERMISSION)
+            return
+        }
+
+        if (args.size < 3) {
+            this.sendI18n(sender, NoirConstants.LanguageConstants.SET_MODEL_USAGE)
+            return
+        }
+
+        val targetPlayer = Bukkit.getPlayer(args[1])
+        if (targetPlayer == null) {
+            this.sendI18n(sender, NoirConstants.LanguageConstants.SET_MODEL_PLAYER_NOT_FOUND,
+                listOf("player"), listOf(args[1]))
+            return
+        }
+
+        val modelId = args[2]
+        if (ModelManager.getModelData(modelId) == null) {
+            this.sendI18n(sender, NoirConstants.LanguageConstants.SET_MODEL_NOT_FOUND,
+                listOf("model"), listOf(modelId))
+            return
+        }
+
+        val textureId = if (args.size >= 4) args[3] else null
+        val resolvedTexture = ModelManager.resolveTextureId(modelId, textureId)
+        if (resolvedTexture == null) {
+            this.sendI18n(sender, NoirConstants.LanguageConstants.SET_MODEL_TEXTURE_NOT_FOUND,
+                listOf("texture", "model"), listOf(textureId ?: "null", modelId))
+            return
+        }
+
+        val playerData = targetPlayer.getNoirData()
+        if (playerData == null) {
+            this.sendI18n(sender, NoirConstants.LanguageConstants.SET_MODEL_PLAYER_NO_DATA,
+                listOf("player"), listOf(targetPlayer.name))
+            return
+        }
+
+        playerData.selectedModelId = modelId
+        playerData.selectedModelTexture = resolvedTexture
+        playerData.markDirty()
+
+        targetPlayer.getYsmConnection().syncModelSelectionData()
+
+        this.sendI18n(sender, NoirConstants.LanguageConstants.SET_MODEL_SUCCESS,
+            listOf("player", "model", "texture"), listOf(targetPlayer.name, modelId, resolvedTexture))
+    }
+
+    // --- tab completion ---
+
     override fun tabComplete(
         sender: CommandSender,
         alias: String,
         args: Array<out String>
     ): MutableList<String> {
-        if (args.size == 1) {
-            return mutableListOf("reload").filter {
-                it.startsWith(args[0], ignoreCase = true)
-            }.toMutableList()
-        }
+        return when (args.size) {
+            1 -> subcommands.keys.filter { it.startsWith(args[0], ignoreCase = true) }.toMutableList()
 
-        return mutableListOf()
+            2 -> if (args[0].equals("setmodel", ignoreCase = true)) {
+                Bukkit.getOnlinePlayers().map { it.name }
+                    .filter { it.startsWith(args[1], ignoreCase = true) }.toMutableList()
+            } else mutableListOf()
+
+            3 -> if (args[0].equals("setmodel", ignoreCase = true)) {
+                ModelManager.getModelIds()
+                    .filter { it.startsWith(args[2], ignoreCase = true) }.toMutableList()
+            } else mutableListOf()
+
+            4 -> if (args[0].equals("setmodel", ignoreCase = true)) {
+                ModelManager.getTexturesOf(args[2])
+                    .filter { it.startsWith(args[3], ignoreCase = true) }.toMutableList()
+            } else mutableListOf()
+
+            else -> mutableListOf()
+        }
     }
+
+    // --- utils ---
 
     private fun sendI18n(
         sender: CommandSender,
@@ -100,8 +179,6 @@ class NoirCommand : Command(
         subKeys: List<String> = emptyList(),
         args: List<Any> = emptyList()
     ) {
-        val message = NoirMain.languageManager.i18n(key, subKeys, args)
-
-        sender.sendMessage(message)
+        sender.sendMessage(NoirMain.languageManager.i18n(key, subKeys, args))
     }
 }

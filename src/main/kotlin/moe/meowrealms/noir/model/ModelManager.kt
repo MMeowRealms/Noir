@@ -156,6 +156,39 @@ object ModelManager {
         return this.name2ModelData.values
     }
 
+    fun getModelData(modelId: String): ServerModelData? {
+        return this.name2ModelData[modelId]
+    }
+
+    fun getModelIds(): Set<String> {
+        return this.name2ModelData.keys
+    }
+
+    /**
+     * Resolve texture ID for a model. If textureId is null, returns the model's default texture.
+     * Returns null if the model doesn't exist or the texture is invalid.
+     */
+    fun resolveTextureId(modelId: String, textureId: String?): String? {
+        val modelData = this.name2ModelData[modelId] ?: return null
+
+        if (textureId != null) {
+            return if (modelData.modelInfo.textures.contains(textureId)) textureId else null
+        }
+
+        // no texture specified, use model default
+        return this.defaultTextureOf(modelId)
+            ?: modelData.modelInfo.textures.firstOrNull()
+    }
+
+    /**
+     * Get all available texture IDs for a model. Returns empty list if model not found.
+     */
+    fun getTexturesOf(modelId: String): List<String> {
+        val modelData = this.name2ModelData[modelId] ?: return emptyList()
+
+        return modelData.modelInfo.textures.map { it as String }
+    }
+
     fun getBuiltinModels(): Collection<ServerModelManager.ServerPackData> {
         return this.loadedPacks.values
     }

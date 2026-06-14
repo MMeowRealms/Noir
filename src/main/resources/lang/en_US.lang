@@ -1,6 +1,12 @@
 noir.command.no_permission=<#cdd6f4>[</#cdd6f4><#89dceb>Noir</#89dceb><#cdd6f4>]</#cdd6f4><#f38ba8>You do not have permission to run this command
-noir.command.help=<#cdd6f4>[</#cdd6f4><#89dceb>Noir</#89dceb><#cdd6f4>]</#cdd6f4>Available subcommands: <#89dceb>/noir reload</#89dceb> - Reload models
+noir.command.help=<#cdd6f4>[</#cdd6f4><#89dceb>Noir</#89dceb><#cdd6f4>]</#cdd6f4>Available subcommands: <#89dceb>/noir reload</#89dceb> - Reload models | <#89dceb>/noir setmodel</#89dceb> - Set player model
 noir.command.unknown_subcommand=<#cdd6f4>[</#cdd6f4><#89dceb>Noir</#89dceb><#cdd6f4>]</#cdd6f4><#f38ba8>Unknown subcommand, use <#89dceb>/noir</#89dceb><#f38ba8> for help
 noir.reload_models.started=<#cdd6f4>[</#cdd6f4><#89dceb>Noir</#89dceb><#cdd6f4>]</#cdd6f4>Reloading models...
 noir.reload_models.success=<#cdd6f4>[</#cdd6f4><#89dceb>Noir</#89dceb><#cdd6f4>]</#cdd6f4><#a6e3a1>Model reload completed, loaded <count> models in <time_ms> ms
 noir.reload_models.failed=<#cdd6f4>[</#cdd6f4><#89dceb>Noir</#89dceb><#cdd6f4>]</#cdd6f4><#f38ba8>Model reload failed: <reason>
+noir.set_model.usage=<#cdd6f4>[</#cdd6f4><#89dceb>Noir</#89dceb><#cdd6f4>]</#cdd6f4><#f38ba8>Usage: /noir setmodel <player> <modelID> [texture]
+noir.set_model.player_not_found=<#cdd6f4>[</#cdd6f4><#89dceb>Noir</#89dceb><#cdd6f4>]</#cdd6f4><#f38ba8>Player not found: <player>
+noir.set_model.model_not_found=<#cdd6f4>[</#cdd6f4><#89dceb>Noir</#89dceb><#cdd6f4>]</#cdd6f4><#f38ba8>Model not found: <model>
+noir.set_model.texture_not_found=<#cdd6f4>[</#cdd6f4><#89dceb>Noir</#89dceb><#cdd6f4>]</#cdd6f4><#f38ba8>Texture not found on model <model>: <texture>
+noir.set_model.player_no_data=<#cdd6f4>[</#cdd6f4><#89dceb>Noir</#89dceb><#cdd6f4>]</#cdd6f4><#f38ba8>Player data not loaded: <player>
+noir.set_model.success=<#cdd6f4>[</#cdd6f4><#89dceb>Noir</#89dceb><#cdd6f4>]</#cdd6f4><#a6e3a1>Set <player>'s model to <model> / <texture>
