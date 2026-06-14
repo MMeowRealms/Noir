@@ -6,6 +6,7 @@ import com.google.gson.annotations.SerializedName
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
 import it.unimi.dsi.fastutil.objects.Object2FloatMap
+import moe.meowrealms.noir.NoirConstants
 import moe.meowrealms.noir.model.ModelManager
 import moe.meowrealms.noir.network.data.DispatchServerDrivenProperty
 import moe.meowrealms.noir.utils.FastutilMapAdapterFactory
@@ -13,9 +14,15 @@ import org.bukkit.entity.Player
 
 class PlayerData (
     @SerializedName("selected_model_id")
-    public var selectedModelId: String = ModelManager.getDefaultModelConfig("default", "default").left,
+    public var selectedModelId: String = ModelManager.getDefaultModelConfig(
+        NoirConstants.ModelDefaults.DEFAULT_MODEL_ID,
+        NoirConstants.ModelDefaults.DEFAULT_MODEL_TEXTURE
+    ).left,
     @SerializedName("selected_model_texture")
-    public var selectedModelTexture: String = ModelManager.getDefaultModelConfig("default", "default").right,
+    public var selectedModelTexture: String = ModelManager.getDefaultModelConfig(
+        NoirConstants.ModelDefaults.DEFAULT_MODEL_ID,
+        NoirConstants.ModelDefaults.DEFAULT_MODEL_TEXTURE
+    ).right,
     @SerializedName("mandatory")
     public var mandatory: Boolean = false,
     @SerializedName("disabled")

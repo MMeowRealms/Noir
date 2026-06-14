@@ -8,6 +8,12 @@ object NoirConstants {
         const val MAX_CHUNK_BYTES = 30 * 1024
     }
 
+    object ModelDefaults {
+        // defaults, overridden by config.yml at startup
+        @Volatile var DEFAULT_MODEL_ID = "default"
+        @Volatile var DEFAULT_MODEL_TEXTURE = "default"
+    }
+
     object PermissionConstants {
         const val RELOAD_MODELS_COMMAND = "noir.commands.reloadmodels"
     }

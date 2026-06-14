@@ -1,5 +1,6 @@
 package moe.meowrealms.noir.data
 
+import moe.meowrealms.noir.NoirConstants
 import moe.meowrealms.noir.NoirMain
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
@@ -156,7 +157,10 @@ object PlayerDataStorage : Listener {
         val data = loaded[player.uniqueId]
             ?: throw IllegalStateException("Player data missing at join for ${player.uniqueId}!")
 
-        data.validateAndCorrectModelSelection("default", "default")
+        data.validateAndCorrectModelSelection(
+            NoirConstants.ModelDefaults.DEFAULT_MODEL_ID,
+            NoirConstants.ModelDefaults.DEFAULT_MODEL_TEXTURE
+        )
         data.initSubComponents(player)
     }
 

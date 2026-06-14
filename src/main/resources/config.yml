@@ -4,3 +4,10 @@ model-sync:
   per-player-rate-limit-mbps: 8.0
   # Global total bandwidth limit in Mbps across all players (0 = unlimited)
   global-rate-limit-mbps: 40.0
+
+# Default model/texture for auto-correction when a player's selection is invalid
+model-defaults:
+  # Model ID to fall back to (must be a loaded model)
+  model-id: "default"
+  # Texture name to fall back to (must exist on the model)
+  texture: "default"

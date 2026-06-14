@@ -1,5 +1,6 @@
 package moe.meowrealms.noir.network
 
+import moe.meowrealms.noir.NoirConstants
 import moe.meowrealms.noir.NoirMain
 import moe.meowrealms.noir.data.PlayerDataStorage.getNoirData
 import moe.meowrealms.noir.model.ModelManager
@@ -61,7 +62,10 @@ class ClientConnection (
 
         val playerData = this.player.getNoirData()
 
-        playerData?.validateAndCorrectModelSelection("default", "default")
+        playerData?.validateAndCorrectModelSelection(
+            NoirConstants.ModelDefaults.DEFAULT_MODEL_ID,
+            NoirConstants.ModelDefaults.DEFAULT_MODEL_TEXTURE
+        )
 
         this.syncModelSubscribes()
         this.syncModelSelectionData()

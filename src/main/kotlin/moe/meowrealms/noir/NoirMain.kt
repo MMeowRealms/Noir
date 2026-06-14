@@ -110,8 +110,12 @@ class NoirMain : JavaPlugin() {
             cfg.getDouble("model-sync.per-player-rate-limit-mbps", 8.0)
         NoirConstants.ModelSyncConstants.GLOBAL_RATE_LIMIT_MBPS =
             cfg.getDouble("model-sync.global-rate-limit-mbps", 40.0)
+        NoirConstants.ModelDefaults.DEFAULT_MODEL_ID =
+            cfg.getString("model-defaults.model-id", "default")!!
+        NoirConstants.ModelDefaults.DEFAULT_MODEL_TEXTURE =
+            cfg.getString("model-defaults.texture", "default")!!
 
-        this.slF4JLogger.info("Config loaded: per-player=${NoirConstants.ModelSyncConstants.PER_PLAYER_RATE_LIMIT_MBPS}Mbps, global=${NoirConstants.ModelSyncConstants.GLOBAL_RATE_LIMIT_MBPS}Mbps")
+        this.slF4JLogger.info("Config loaded: per-player=${NoirConstants.ModelSyncConstants.PER_PLAYER_RATE_LIMIT_MBPS}Mbps, global=${NoirConstants.ModelSyncConstants.GLOBAL_RATE_LIMIT_MBPS}Mbps, defaultModel=${NoirConstants.ModelDefaults.DEFAULT_MODEL_ID}/${NoirConstants.ModelDefaults.DEFAULT_MODEL_TEXTURE}")
     }
 
     fun initCommands() {
