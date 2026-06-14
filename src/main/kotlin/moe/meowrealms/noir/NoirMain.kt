@@ -1,7 +1,9 @@
 package moe.meowrealms.noir
 
 import it.unimi.dsi.fastutil.floats.FloatArrayList
+import moe.meowrealms.noir.command.ReloadModelsCommand
 import moe.meowrealms.noir.data.PlayerDataStorage
+import moe.meowrealms.noir.i18n.I18NManager
 import moe.meowrealms.noir.model.ModelManager
 import moe.meowrealms.noir.network.ClientConnectionManager
 import moe.meowrealms.noir.network.data.DispatchServerDrivenProperty
@@ -19,6 +21,7 @@ class NoirMain : JavaPlugin() {
     companion object {
         lateinit var instance: NoirMain
         lateinit var packetRegistry: PacketRegistry
+        val languageManager: I18NManager = I18NManager()
     }
 
     fun registerPackets() {
@@ -93,13 +96,27 @@ class NoirMain : JavaPlugin() {
         this.slF4JLogger.info("Entity tracker initialized.")
     }
 
+    fun initI18n() {
+        languageManager.loadLanguageFile("zh_CN")
+
+        this.slF4JLogger.info("I18n initialized.")
+    }
+
+    fun initCommands() {
+        this.server.commandMap.register("noir", ReloadModelsCommand())
+
+        this.slF4JLogger.info("Commands initialized.")
+    }
+
     override fun onEnable() {
         instance = this
 
+        this.initI18n()
         this.initNetworking()
         this.initAndLoadModels()
         this.initDataStorage()
         this.initEntityTracker()
+        this.initCommands()
     }
 
     override fun onDisable() {

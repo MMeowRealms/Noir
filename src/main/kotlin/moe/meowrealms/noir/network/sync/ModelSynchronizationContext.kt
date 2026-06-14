@@ -47,6 +47,8 @@ class ModelSynchronizationContext(
             for (scheduledTask in this.scheduledTasks) {
                 scheduledTask.cancel()
             }
+
+            this.scheduledTasks.clear()
         }
 
         this.begin()

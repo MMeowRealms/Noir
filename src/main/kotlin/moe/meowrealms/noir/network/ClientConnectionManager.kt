@@ -94,6 +94,20 @@ object ClientConnectionManager : Listener, PluginMessageListener {
         NoirMain.instance.slF4JLogger.error("Error has caught during packet processing! Packet sender is ${player.name}.", throwable)
     }
 
+    fun restartModelSynchronizationForConnectedPlayers() {
+        for ((playerUuid, connection) in this.connectedPlayers) {
+            val player = Bukkit.getPlayer(playerUuid) ?: continue
+
+            NoirMain.instance.morePaperLib.scheduling().entitySpecificScheduler(player).run(Runnable {
+                try {
+                    connection.restartModelSynchronizationAfterReload()
+                } catch (throwable: Throwable) {
+                    this.connectionExceptionCaught(player, throwable)
+                }
+            }, null)
+        }
+    }
+
     fun sendMessage(receiver: Player, packet: Packet) {
         try {
             val packetId = NoirMain.packetRegistry.lookupForId(packet)

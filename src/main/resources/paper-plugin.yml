@@ -6,3 +6,8 @@ authors: [ MrHua269, Klop233 ]
 description: The 3rd generation of plugin version of ysm!!!
 
 folia-supported: true
+
+permissions:
+  noir.commands.reloadmodels:
+    description: Allows reloading Noir YSM models
+    default: op

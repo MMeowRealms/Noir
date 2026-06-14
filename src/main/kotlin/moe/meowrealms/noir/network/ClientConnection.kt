@@ -52,6 +52,21 @@ class ClientConnection (
         this.tickTask?.cancel()
     }
 
+    fun restartModelSynchronizationAfterReload() {
+        if (!this.handshakeConfirmed) {
+            return
+        }
+
+        this.synchronizationContext.restart()
+
+        val playerData = this.player.getNoirData()
+
+        playerData?.validateAndCorrectModelSelection("default", "default")
+
+        this.syncModelSubscribes()
+        this.syncModelSelectionData()
+    }
+
     private fun syncEntityStatesToAnimationData() {
         val playerData = this.player.getNoirData() ?: return
         val animationData = playerData.animationData
