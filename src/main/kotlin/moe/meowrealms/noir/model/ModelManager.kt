@@ -29,6 +29,7 @@ import java.security.SecureRandom
 import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ForkJoinPool
 
 // TODO 等ysm开源了重写()
 object ModelManager {
@@ -437,7 +438,14 @@ object ModelManager {
                         } catch (e: Exception) {
                             NoirMain.instance.slF4JLogger.error("Failed to load model at: $path", e)
                         }
-                    }, { NoirMain.instance.morePaperLib.scheduling().asyncScheduler().execute(it) })
+                    }, {
+                        if (!NoirMain.inited) {
+                            ForkJoinPool.commonPool().execute(it)
+                            return@runAsync
+                        }
+
+                        NoirMain.instance.morePaperLib.scheduling().asyncScheduler().execute(it)
+                    })
                 }.toList().toTypedArray()).join()
             }
         } catch (e: Exception) {
@@ -495,7 +503,14 @@ object ModelManager {
                                     NoirMain.instance.slF4JLogger.error("Failed to load pack metadata: $packJson", e)
                                 }
                             }
-                        }, { NoirMain.instance.morePaperLib.scheduling().asyncScheduler().execute(it) }
+                        }, {
+                            if (!NoirMain.inited) {
+                                ForkJoinPool.commonPool().execute(it)
+                                return@runAsync
+                            }
+
+                            NoirMain.instance.morePaperLib.scheduling().asyncScheduler().execute(it)
+                        }
                     )
                 }.toList().toTypedArray()).join()
             }

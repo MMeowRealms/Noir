@@ -22,6 +22,7 @@ class NoirMain : JavaPlugin() {
         lateinit var instance: NoirMain
         lateinit var packetRegistry: PacketRegistry
         val languageManager: I18NManager = I18NManager()
+        var inited = false
     }
 
     fun registerPackets() {
@@ -134,6 +135,8 @@ class NoirMain : JavaPlugin() {
         this.initDataStorage()
         this.initEntityTracker()
         this.initCommands()
+
+        inited = true
     }
 
     override fun onDisable() {
