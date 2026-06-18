@@ -9,6 +9,8 @@
 ![Github Action](https://img.shields.io/github/actions/workflow/status/StarCraftOffical/Noir/.github/workflows/gradle.yml?style=flat-square)
 ![License](https://img.shields.io/github/license/NaturalCodeClub/Hearse?style=flat-square)
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/MMeowRealms/Noir)
+
 ### 服务端支持
 
 - Folia(1.21+)
