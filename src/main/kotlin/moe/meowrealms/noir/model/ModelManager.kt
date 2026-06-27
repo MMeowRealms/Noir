@@ -20,6 +20,7 @@ import moe.meowrealms.noir.network.sync.ModelSynchronizationContext
 import org.apache.commons.lang3.StringUtils
 import org.apache.commons.lang3.tuple.Pair
 import org.bukkit.entity.Player
+import rip.ysm.legacy.YesModelUtils
 import rip.ysm.security.YsmCrypt
 import java.net.URI
 import java.nio.charset.StandardCharsets
@@ -424,15 +425,27 @@ object ModelManager {
                                 val relativePath = modelsDir.relativize(path).toString().replace('\\', '/')
                                 val modelId = relativePath // 原始代码就是 relativePath
                                 val raw = Files.readAllBytes(path)
-                                val decrypted = YsmCrypt.decryptYsmFile(raw)
-                                YSMBinaryDeserializer(decrypted).use { deserializer ->
-                                    val rawModel = deserializer.deserializeKeepOpen()
-                                    deserializer.parseYSMFooter(rawModel) // 仅用于 GUI 展示
-                                    val data = generateCacheFile(modelId, rawModel, cacheDir, isAuth, validCaches)
-                                    if (data != null) {
-                                        loaded[modelId] = data
-                                        if (isAuth) authIds.add(modelId)
+                                val ysmCryptoVersion = YesModelUtils.getYsmCryptoVersion(raw);
+                                if (ysmCryptoVersion == -1) throw IllegalStateException ("Unknown YSM crypto version for file: $path");
+
+                                var rawModel: RawYsmModel?
+                                if (ysmCryptoVersion == 1 || ysmCryptoVersion == 2) { // 旧版加密模型
+                                    val input = YesModelUtils.input(raw)
+                                    YSMFolderDeserializer(input).use {
+                                        rawModel = it.deserialize();
                                     }
+                                } else {
+                                    val decrypted = YsmCrypt.decryptYsmFile(raw)
+                                    YSMBinaryDeserializer(decrypted).use { deserializer ->
+                                        rawModel = deserializer.deserializeKeepOpen()
+                                        deserializer.parseYSMFooter(rawModel) // 仅用于 GUI 展示
+                                    }
+                                }
+
+                                val data = generateCacheFile(modelId, rawModel!!, cacheDir, isAuth, validCaches);
+                                if (data != null) {
+                                    loaded[modelId] = data
+                                    if (isAuth) authIds.add(modelId)
                                 }
                             }
                         } catch (e: Exception) {
